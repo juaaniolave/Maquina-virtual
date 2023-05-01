@@ -4,14 +4,20 @@
 #include <ctype.h>
 
 
-#define dsSize 1024*16 //1 KiB * 16 ) KiB
-#define csSize 1024*16
+#define DS_SIZE 1024*16 //1 KiB * 16 ) KiB
+#define CS_SIZE 1024*16
+#define MV_SIZE 1024*16
 #define cantRegistros 16
-#define tddsSize 8
+#define TDDS_SIZE 8
 #define cantFunciones 255
 #define CS 0
 #define DS 1
+#define KS 2
+#define ES 3
+#define SS 4
 #define IP 5
+#define SP 6
+#define BP 7
 #define CC 8
 #define AC 9
 #define EAX 10
@@ -25,8 +31,9 @@
 typedef int tpar;
 typedef tpar* tppar;
 
-void leeArchivoBinario(unsigned char[], int* ,char*);
-void inicializaRegistros(unsigned char[], unsigned char[], unsigned char[]);
+void leeArchivoBinario(unsigned char[], int* ,char*,int);
+void inicializaRegistros(int);
+void dissasambly(unsigned char[],int);
 
 void MOV(tppar,tppar);
 void ADD(tppar,tppar);
@@ -55,17 +62,29 @@ void NOT(tppar,tppar);
 void STOP(tppar,tppar);
 
 
+unsigned char* mv;
 int reg[cantRegistros]={0}; //registros, variable global para que cualquier funcion pueda modificarlos
-unsigned char ds[dsSize]; // datasegment
-int  tdds[tddsSize]; ///
+unsigned int tdds[TDDS_SIZE]; //Tabla de descriptores de segmentos ESTABA DECLARADO DOS VECES
 
 int main(int argc, char *argv[]) {
 
-   //char *nombre_archivo = argv[1]; // descomentar para que funcione la lectura por consola
-   char *nombre_archivo = "fibo.vmx"; //comentar para que funcion la lectura por consola
+   char* extension=".vmx";
+   char *nombre_archivo = "fibo.vmx";
 
-   unsigned int tdds[tddsSize]; //Tabla de descriptores de segmentos
-   unsigned char cs[csSize]; // codesegment
+   for (int i = 1; i < argc; i++) {
+      char *param = argv[i];
+      if (strstr(param, extension) != NULL) {
+         nombre_archivo = param;
+         break;
+      }
+   }
+   if (nombre_archivo == NULL){
+   printf("Por favor indique el nombre del archivo");
+   exit(-4);
+   }
+
+  
+
    int cantInstrucciones=0; //tama�o logico de cs
 
    void (*funciones[cantFunciones])(tppar,tppar)={NULL};
@@ -93,20 +112,43 @@ int main(int argc, char *argv[]) {
    funciones[57]=LDH;
    funciones[58]=RND;
    funciones[59]=NOT;
+   funciones[60]=PUSH;
+   funciones[61]=POP;
+   funciones[62]=CALL;
    funciones[240]=STOP;
+   funciones[241]=RET;
+
+   //RECUPERO TAMAÑO DEL MV
+
+   int m = MV_SIZE;
+   for (int i = 1; i < argc; i++) { // El primer argumento es el nombre del programa
+       if (strncmp(argv[i], "m=", 2) == 0) {
+           m = atoi(argv[i] + 2); // Extracción del valor de M como un entero
+           
+           break;
+       }
+   }
+   //ASIGNO TAMAÑO AL MV
+   mv = (char*)malloc(sizeof(char)*m);
+   
+
+   leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m); // lee el archivo binario y carga las instrucciones en el codesegment
+
+// BUSCA PARAMETRO -d
+   for (int i = 1; i < argc; i++) { // El primer argumento es el nombre del programa
+       if (strcmp(argv[i], "-d") == 0) {
+           dissasambly(mv, cantInstrucciones); // Ejecuta dissasambly
+           break;
+       }
+   }
 
 
-   leeArchivoBinario(cs, &cantInstrucciones, nombre_archivo); // lee el archivo binario y carga las instrucciones en el codesegment
-
-   //if (argc>2)// descomentar para que funcione la lectura por consola
-   // if (!strcmp(argv[2],"[-d]")) //descomentar para que funcione la lectura por consola
-         dissasambly(cs, cantInstrucciones);
-
+   inicializaRegistros(m);
 
    //programa principal
-   short posMemA;
+   unsigned short posMemA, posMemB;
    tpar auxA;
-   int aux;
+   int aux1,aux2;
    char treg1, treg2; //0 si los valores de registros son completos por ej EFX, otro valor si son EL, EC, o EX
    unsigned char codOp, tOpA,tOpB; //codigo de operacion, tipo op1, tipo op2
    tpar op1,op2; //operandos
@@ -116,31 +158,31 @@ int main(int argc, char *argv[]) {
 
    while (reg[IP] <= cantInstrucciones){
 
-      treg1=treg2=op1=op2=aux=0;
+      treg1=treg2=op1=op2=aux1=0;
 
   //    printf("[%04X]  ",reg[IP]);
 
-      tOpA=(cs[reg[IP]]>>6)&3; // asigna los bits 1100000
-      tOpB=(cs[reg[IP]]>>4)&3; //asigna los bits 00110000
+      tOpA = (mv[reg[IP]] >> 6) & 3; // asigna los bits 1100000
+      tOpB = (mv[reg[IP]] >> 4) & 3; //asigna los bits 00110000
 
     //  printf("%02X ",cs[reg[IP]]);
 
-      if (tOpB ==3){ // cod operacion uno o sin operandos
+      if (tOpB == 3){ // cod operacion uno o sin operandos
 
-         if (tOpA ==3){  // cod operacion 1111 sin operandos
-            codOp=cs[reg[IP]++];
+         if (tOpA == 3){  // cod operacion 1111 sin operandos
+            codOp = mv[reg[IP]++];
             funciones[codOp](&cantInstrucciones,0);
             exit(1);
          }
          else { //cod op xx11 1 operando
-            codOp=cs[reg[IP]++]&63; // &00111111
+            codOp = mv[reg[IP]++] & 63; // &00111111
 
 
 
          }
       }
       else{ //cod op 2 operandos
-            codOp=cs[reg[IP]++]&15; //&00001111
+            codOp = mv[reg[IP]++] & 15; //&00001111
 
 
       }
@@ -152,128 +194,147 @@ int main(int argc, char *argv[]) {
 
       //   printf("%02X ",cs[reg[IP]]);
 
-         auxA = (reg[cs[reg[IP]++]]); //valor del registro, por ejemplo lo que esta contenido en DS (0)
+         auxA = ((tdds[((reg[mv[reg[IP]]])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+         auxA +=((reg[mv[reg[IP]++]])&0x0000FFFF);
 
-         posMemA = cs[reg[IP]++];
+         posMemA = mv[reg[IP]++];
          posMemA <<= 8;
       //   printf("%02X ",cs[reg[IP]]);
 
-         posMemA |= cs[reg[IP]++];
+         posMemA |= mv[reg[IP]++];
        //  printf("%02X ",cs[reg[IP]]);
 
-         posMemA+=auxA; // offset += valor del reg, por ej [DS+10]
+         posMemA += auxA; // offset += valor del reg, por ej [DS+10]
 
-          if (!(-1 < posMemA && posMemA < ((tdds[1] & 0x00FF) - 4) )) { //En la segunda parte puede que sea modificado (el 4)
-             printf("Error: Fallo de segmento\n");
-             exit(1);
+          if (!((tdds[1])>>16)&0x0000FFFF <= posMemA && posMemA < ((tdds[1]>>16)&0x0000FFFF+((tdds[1] & 0x0000FFFF)) - 4) ) { //En la segunda parte puede que sea modificado (el 4)
+             printf("Error de segmentacion en DS\n");
+             exit(-420);
           }
 
-         op1=0; //limpio
-         for (int j = 0;j<4;j++){ //recorta y almacena las 4 celdas de memoria en op1
-            op1<<4;
-            op1|=ds[posMemA+j]; // primero es ds[posMem + 0]
+         op1 = 0; //limpio
+
+         for (int j = 0; j < 4 ; j++){ //recorta y almacena las 4 celdas de memoria en op1
+            op1 <<= 8;
+            op1 |= mv[posMemA + j]; // primero es ds[posMem + 0]
          }
 
          //pOp1=&(ds[op1]);
 
-         pOp1=&op1;
+         pOp1 =& op1;
       }
 
 
       else if (tOpA == 1){
        //  printf("%02X ",cs[reg[IP]]);
-         op1 = cs[reg[IP]++];
+         op1 = mv[reg[IP]++];
          op1 = op1 <<  8;
      //    printf("%02X ",cs[reg[IP]]);
-         op1 = op1 | cs[reg[IP]++];
+         op1 = op1 | mv[reg[IP]++];
+         op1<<=16; op1>>=16;
 
-         pOp1=&op1;
+         pOp1 =& op1;
 
       }
       else if (tOpA == 2){
       //   printf("%02X ",cs[reg[IP]]);
-         treg1 = (cs[reg[IP]] >> 4) & 0b0011;
-         op1   = cs[reg[IP]++] & 0b1111;
+         treg1 = (mv[reg[IP]] >> 4) & 0b0011;
+         op1   = mv[reg[IP]++] & 0b1111;
 
-         aux=op1;
+         aux1 = op1;
 
          switch (treg1) {
             //nada, es el completo, EAX
             case 0b00: op1 = reg[op1];
                break;
             //Low register, AL
-            case 0b01: op1 = (reg[op1] & 0b0000000000001111);
+            case 0b01: op1 = (reg[op1] & 0x000000FF);
+            op1<<=24; op1>>=24;
                break;
             //High register, AH
-            case 0b10: op1 = ((reg[op1] & 0x0000000011110000) >> 8);
+            case 0b10: op1 = ((reg[op1] & 0x0000FF00) >> 8);
+            op1<<=24; op1>>=24;
                break;
             //Mitad del registro, AX
-            case 0b11: op1 = (reg[op1] & 0x000000011111111);
+            case 0b11: op1 = (reg[op1] & 0x0000FFFF);
+            op1<<=16; op1>>=16;
                break;
          }
 
 
 
-         pOp1=&op1;
+         pOp1 =& op1;
       }
 
       if (tOpB == 0){
-         int auxB; short posMemB;
+         int auxB;
       //   printf("%02X ",cs[reg[IP]]);
 
-         auxB = (reg[cs[reg[IP]++]]); //valor del registro, por ejemplo lo que esta contenido en DS (0)
+         auxB = ((tdds[((reg[mv[reg[IP]]])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+          auxB +=((reg[mv[reg[IP]++]])&0x0000FFFF);
 
-         posMemB = cs[reg[IP]++];
+         posMemB = mv[reg[IP]++];
          posMemB <<= 8;
        //  printf("%02X ",cs[reg[IP]]);
 
-         posMemB |= cs[reg[IP]++];
+         posMemB |= mv[reg[IP]++];
        //  printf("%02X ",cs[reg[IP]]);
 
-         posMemB+=auxB; // offset += valor del reg, por ej [DS+10]
+         posMemB += auxB; // offset += valor del reg, por ej [DS+10]
+         
+          if (!((tdds[1])>>16)&0x0000FFFF <= posMemB && posMemB < ((tdds[1]>>16)&0x0000FFFF+((tdds[1] & 0x0000FFFF)) - 4) ) { //En la segunda parte puede que sea modificado (el 4)
+             printf("Error de segmentacion en DS\n");
+             exit(-420);
+          }
+
 
          op2=0; //limpio
-         for (int j = 0;j<4;j++){ //recorta y almacena las 4 celdas de memoria en op1
-            op2<<4;
-            op2|=ds[posMemB+j]; // primero es ds[posMem + 0]
+         for (int j = 0; j < 4 ; j++){ //recorta y almacena las 4 celdas de memoria en op1
+            op2 <<= 8;
+            op2 |= mv[posMemB + j]; // primero es ds[posMem + 0]
          }
 
          //pOp1=&(ds[op1]);
 
-         pOp2=&op2;
+         pOp2 =& op2;
       }
       else if (tOpB == 1){
        //  printf("%02X ",cs[reg[IP]]);
-         op2 = cs[reg[IP]++];
+         op2 = mv[reg[IP]++];
          op2 = op2 <<  8;
       //   printf("%02X ",cs[reg[IP]]);
-         op2 = op2 | cs[reg[IP]++];
+         op2 = op2 | mv[reg[IP]++];
+         op2<<=16; op2>>=16;
 
 
-         pOp2=&op2;
+         pOp2 =& op2;
       }
-      else if (tOpB == 2){
-       //  printf("%02X ",cs[reg[IP]]);
-         treg2= (cs[reg[IP]]>>4)&0b0011;
-         op2 = cs[reg[IP]++]&0b1111;
+      else
+         if (tOpB == 2){
+            //printf("%02X ",cs[reg[IP]]);
+            treg2 = (mv[reg[IP]] >> 4) & 0b0011;
+            op2   = mv[reg[IP]++] & 0b1111;
+            aux2 = op2;
 
-         switch (treg2) {
-            //nada, es el completo, EAX
-            case 0b00: op2 = (reg[op2]);
-               break;
-            //Low register, AL
-            case 0b01: op2 = (reg[op2] & 0x000000000001111);
-               break;
-            //High register, AH
-            case 0b10: op2 = ((reg[op2] & 0x0000000011110000) >> 8);
-               break;
-            //Mitad del registro, AX
-            case 0b11: op2 = (reg[op2] & 0x00000000111111111);
-               break;
+               switch (treg2) {
+                  //nada, es el completo, EAX
+                  case 0b00: op2 = (reg[op2]);
+                     break;
+                  //Low register, AL
+                  case 0b01: op2 = (reg[op2] & 0x000000FF);
+                  op2<<=24; op2>>=24;
+                     break;
+                  //High register, AH
+                  case 0b10: op2 = ((reg[op2] & 0x000000FF00) >> 8);
+                  op2<<=24; op2>>=24;
+                     break;
+                  //Mitad del registro, AX
+                  case 0b11: op2 = (reg[op2] & 0x0000FFFF);
+                  op2<<=16; op2>>=16;
+                     break;
+               }
+            pOp2 =& op2;
+
          }
-         pOp2=&op2;
-
-      }
 
    //  printf("\t | \t");
 
@@ -289,23 +350,26 @@ int main(int argc, char *argv[]) {
          switch (treg1)
          {
             //nada, es el registro completo EAX
-            case 0b00: reg[aux] = *pOp1;
+            case 0b00: reg[aux1] = *pOp1;
                break;
             //Low register, AL
             case 0b01:
-               reg[aux] &= 0xFFF0;
-               reg[aux] |= op1;
+               reg[aux1] &= 0xFFFFFF00;
+               op1&=0x000000FF;
+               reg[aux1] |= op1;
             break;
             //High register, AH
             case 0b10:
-               reg[aux] &= 0xFF0F;
+               reg[aux1] &= 0xFFFF00FF;
                *pOp1   <<= 8;
-               reg[aux] |= *pOp1;
+               op1&=0x0000FF00;
+               reg[aux1] |= *pOp1;
             break;
             //Mitad del registro, AX
             case 0b11:
-               reg[aux] &= 0xFF00;
-               reg[aux] |= *pOp1;
+               reg[aux1] &= 0xFFFF0000;
+               op1&=0x0000FFFF;
+               reg[aux1] |= *pOp1;
             break;
          }
    }
@@ -315,11 +379,61 @@ int main(int argc, char *argv[]) {
          { // tOpA == 0, de memoria
          //mem1 = (char)(0xFF & *pOp1);
 
-         ds[posMemA]     = (char)(0xFF000000 & *pOp1);
-         ds[posMemA + 1] = (char)(0x00FF0000 & *pOp1);
-         ds[posMemA + 2] = (char)(0x0000FF00 & *pOp1);
-         ds[posMemA + 3] = (char)(0x000000FF & *pOp1);
+         // ds[posMemA]     = (char)(0xFF000000 & *pOp1);
+         // ds[posMemA + 1] = (char)(0x00FF0000 & *pOp1);
+         // ds[posMemA + 2] = (char)(0x0000FF00 & *pOp1);
+         // ds[posMemA + 3] = (char)(0x000000FF & *pOp1);
+         mv[posMemA]     = (0xFF000000 & *pOp1)>>24;
+         mv[posMemA + 1] = (0x00FF0000 & *pOp1)>>16;
+         mv[posMemA + 2] = (0x0000FF00 & *pOp1)>>8;
+         mv[posMemA + 3] = (0x000000FF & *pOp1);
+
       }
+   if (codOp == 3) { //codOP 3 = SWAP
+      if (tOpB == 0) {
+         // ds[posMemB]     = (char)(0xFF000000 & *pOp2);
+         // ds[posMemB + 1] = (char)(0x00FF0000 & *pOp2);
+         // ds[posMemB + 2] = (char)(0x0000FF00 & *pOp2);
+         // ds[posMemB + 3] = (char)(0x000000FF & *pOp2);
+         mv[posMemB]     = (0xFF000000 & *pOp2)>>24;
+         mv[posMemB + 1] = (0x00FF0000 & *pOp2)>>16;
+         mv[posMemB + 2] = (0x0000FF00 & *pOp2)>>8;
+         mv[posMemB + 3] = (0x000000FF & *pOp2);
+
+
+
+
+      }
+      else
+         if (tOpB == 2) {
+            switch (treg2)
+            {
+            //nada, es el registro completo EAX
+            case 0b00: reg[aux2] = *pOp2;
+               break;
+            //Low register, AL
+            case 0b01:
+               reg[aux2] &= 0xFFFFFF00;
+               op2&=0x000000FF;
+               reg[aux2] |= op2;
+            break;
+            //High register, AH
+            case 0b10:
+               reg[aux2] &= 0xFFFF00FF;
+               *pOp2   <<= 8;
+               op1&=0x0000FF00;
+               reg[aux2] |= *pOp2;
+            break;
+            //Mitad del registro, AX
+            case 0b11:
+               reg[aux2] &= 0xFFFF0000;
+               op1&=0x0000FFFF;
+               reg[aux2] |= *pOp2;
+            break;
+            }
+         }
+   }
+
 
   // printf("\n");
    }
@@ -362,8 +476,8 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
    strcpy(funciones[59],"NOT");
    strcpy(funciones[240],"STOP");
 
-   strcpy(registros[0],"CS");
-   strcpy(registros[1],"DS");
+   strcpy(registros[0],"cs");
+   strcpy(registros[1],"ds");
    //strcpy(registros[2],"");
    //strcpy(registros[3],"");
    //strcpy(registros[4],"");
@@ -417,15 +531,6 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
       }
 
-      //asigno valores a los operandos dependiendo el tama�o
-
-      // for (int j=tOpA;j<3;j++){
-      //    printf("%02X ",cs[i++]);
-      // }
-      // for (int j=tOpB;j<3;j++){
-      //    printf("%02X ",cs[i++]);
-      // }
-
       if (tOpA == 0){  // operando apunta a direccion en memoria
          printf("%02X ",cs[i]);
          op1 = cs[i++];
@@ -445,6 +550,7 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
          op1 = op1 <<  8;
          printf("%02X ",cs[i]);
          op1 = op1 | cs[i++];
+         op1<<=16; op1>>=16;
 
          //pOp1=&op1;
       }
@@ -477,6 +583,8 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
          op2 = op2 <<  8;
          printf("%02X ",cs[i]);
          op2 = op2 | cs[i++];
+         op2<<=16; op2>>=16;
+
 
 
         // pOp2=&op2;
@@ -495,14 +603,20 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
          printf("\t | \t");
       else
          printf("\t\t |\t");
-      printf ("%s \t",strlwr(funciones[codOp]));
+      printf ("%s \t\t",strlwr(funciones[codOp]));
 
       if (tOpA==0){
          // if((op1)&255!=0)
          //    printf("[%s + %d]\t",strlwr(registros[(op1>>16)&15]), (op1)&255);
          // else
          //    printf("[%s]\t",strlwr(registros[(op1>>16)&15]));
-         printf("[%d],\t",(op1)&255);
+         if ((op1)&0x00FFFF){
+         printf("[%s+%d], ",registros[(op1>>16)&0xFF],(op1)&0x00FFFF);
+         if ((op1)&0x00FFFF < 10 || (op1)&0x00FFFF > -10){};
+         
+         }
+         else
+         printf("[%s],\t ",registros[(op1>>16)&0xFF]);
       }
 
       else if (tOpA==1){
@@ -529,14 +643,18 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
             }
          //printf ("%s,\t",strlwr(registros[op1]));
          }
+         printf("\t");
 
             if (tOpB==0){
          // if((op1)&255!=0)
          //    printf("[%s + %d]\t",strlwr(registros[(op1>>16)&15]), (op1)&255);
          // else
          //    printf("[%s]\t",strlwr(registros[(op1>>16)&15]));
-         printf("[%d]\t",(op2)&255);
-            }
+            if ((op2)&0x00FFFF)
+         printf("[%s+%d],\t",registros[(op2>>16)&0xFF],(op2)&0x00FFFF);
+            else
+         printf("[%s],\t",registros[(op2>>16)&0xFF]);
+         }
 
       else if (tOpB==1){
          if(codOp >=50 && codOp <=55) //es algun jump, tiene q mostrar en hexa
@@ -576,15 +694,14 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
 
 void MOV(tppar op1,tppar op2){ ///0
-   // printf("%s",__func__);
+   //printf("%s",__func__);
 
    //no son partes cortas de registros
     *op1=*op2;
 
 }
-
  void ADD(tppar op1,tppar op2){ ///1
- // printf("%s",__func__);
+ //printf("%s",__func__);
 
      *op1+=*op2;
 
@@ -595,9 +712,8 @@ void MOV(tppar op1,tppar op2){ ///0
       else
        reg[CC]=0;
  }
-
 void SUB(tppar op1,tppar op2){ ///2
-// printf("%s",__func__);
+//printf("%s",__func__);
 
     *op1 -= *op2;
 
@@ -607,32 +723,34 @@ void SUB(tppar op1,tppar op2){ ///2
       reg[CC]=2;
    else
       reg[CC]=0;
+   
+   reg[CC]<<=30;
 
 }
 void SWAP(tppar op1,tppar op2){ ///3
-// printf("%s",__func__);
-
-
+//printf("%s",__func__);
     tpar aux;
-    aux=*op1;
-    *op1=*op2;
-    *op2=aux;
 
+    aux  = *op1;
+    *op1 = *op2;
+    *op2 = aux;
 }
 void MUL(tppar op1,tppar op2) { ///4
-// printf("%s",__func__);
+//printf("%s",__func__);
 
    (*op1) *= (*op2);
 
-   if (*op1==0)
-      reg[CC]=1;
-   else if (*op1<0)
-      reg[CC]=2;
+   if (*op1 == 0)
+      reg[CC] = 1;
    else
-      reg[CC]=0;
+      if (*op1 < 0)
+         reg[CC] = 2;
+      else
+         reg[CC] =0;
+   reg[CC]<<=30;
 }
 void DIV(tppar op1,tppar op2) { ///5
-// printf("%s",__func__);
+//printf("%s",__func__);
 
 
    if (*op2 == 0) {
@@ -645,17 +763,19 @@ void DIV(tppar op1,tppar op2) { ///5
       (*op1) /= (*op2);
    }
 
-   if (*op1==0)  //modifica valores de Z y N
-      reg[CC]=1;
-   else if (*op1<0)
-      reg[CC]=2;
+   if (*op1 == 0)  //modifica valores de Z y N
+      reg[CC] = 1;
    else
-      reg[CC]=0;
+      if (*op1 < 0)
+         reg[CC]=2;
+      else
+         reg[CC]=0;
+         reg[CC]<<=30;
 
 
 }
 void CMP(tppar op1,tppar op2) { ///6
-// printf("%s",__func__);
+//printf("%s",__func__);
 
 
 
@@ -669,17 +789,18 @@ void CMP(tppar op1,tppar op2) { ///6
       reg[CC]=2;
    else
       reg[CC]=0;
+      reg[CC]<<=30;
 }
 void SHL(tppar op1,tppar op2) { ///7
-// printf("%s",__func__);
+//printf("%s",__func__);
    *op1 = *op1 << *op2;
 }
 void SHR(tppar op1,tppar op2) { ///8
-// printf("%s",__func__);
+//printf("%s",__func__);
    *op1 = *op1 >> *op2;
 }
 void AND(tppar op1,tppar op2) { ///9
-// printf("%s",__func__);
+//printf("%s",__func__);
    *op1 = (*op1) & (*op2);
 
    if (*op1==0)
@@ -688,9 +809,10 @@ void AND(tppar op1,tppar op2) { ///9
       reg[CC]=2;
    else
       reg[CC]=0;
+      reg[CC]<<=30;
 }
 void OR(tppar op1,tppar op2) { ///10 o A
-// printf("%s",__func__);
+//printf("%s",__func__);
     *op1 = (*op1) | (*op2);
 
    if (*op1==0)
@@ -699,9 +821,10 @@ void OR(tppar op1,tppar op2) { ///10 o A
       reg[CC]=2;
    else
       reg[CC]=0;
+      reg[CC]<<=30;
 }
 void XOR(tppar op1,tppar op2) { ///11 o B
-// printf("%s",__func__);
+//printf("%s",__func__);
     *op1 = (*op1) ^ (*op2);
 
 
@@ -711,62 +834,61 @@ void XOR(tppar op1,tppar op2) { ///11 o B
       reg[CC]=2;
    else
       reg[CC]=0;
+      reg[CC]<<=30;
 }
-
-
 void SYS(tppar op1,tppar op2) { ///48  terminado?
-// printf("%s",__func__);
+//printf("%s",__func__);
  int i;
  unsigned int aux,k;
 
 
    if (*op1 == 1){ //scanf
-   printf("\ningrese algun valor: ");
-      switch (reg[EAX]&0b0000011) {
+  // printf("\ningrese algun valor: ");
+      switch (reg[EAX]&0b0001111) {
 
          case 1: //interpreta decimal
-            for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
                scanf("%d",&aux); //guarda en aux para despues recortar
                k=24;
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  ds[i++]=((aux>>k)&0x000000FF);
+                  mv[i++]=((aux>>k)&0x000000FF);
                   k-=8;
                }
             }
          break;
 
          case 2: //intepreta caracter
-            for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
                scanf("%c",&aux); //guarda en aux para despues recortar
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  ds[i++]=(aux>>k)&0x000000FF;
+                  mv[i++]=(aux>>k)&0x000000FF;
                   k-=8;
                }
             }
          break;
 
          case 4: // interpreta octal
-            for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
                scanf("%o",&aux); //guarda en aux para despues recortar
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  ds[i++]=(aux>>k)&0x000000FF;
+                  mv[i++]=(aux>>k)&0x000000FF;
                   k-=8;
                }
             }
          break;
 
          case 8: // interpreta Hexa
-            for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
                scanf("%x",&aux); //guarda en aux para despues recortar
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  ds[i++]=(aux>>k)&0x000000FF;
+                  mv[i++]=(aux>>k)&0x000000FF;
                   k-=8;
                }
             }
          break;
 
       default:
-         printf("\nError, valor de operacion para SYS invalido\n op1 vale %d y al vale %d",*op1,reg[EAX]&0b0000011);
+         printf("\nError, valor de operacion para SYS invalido\n");
          exit(-3);
          break;
       }
@@ -774,59 +896,87 @@ void SYS(tppar op1,tppar op2) { ///48  terminado?
    }
 
    else if(*op1==2){ //printf
-      printf("\n\n");
+      //printf("\n\n");
 
-      switch (reg[EAX]&3) {
+      // switch (reg[EAX]&0b00001111) {
 
-         case 1: //interpreta decimal
-            for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
+        // case 1: //interpreta decimal
+            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
               aux=0;
+            printf("[%04X]:",i-(tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);
+            if (reg[EAX]&0b10) //si tiene que imprimir caracter
+                  printf ("'");
+
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  aux=aux<<4;
-                  aux=aux|ds[i++]; //guarda en aux para despues recortar
+                  
+                  if (reg[EAX]&0b10){ //si tiene que imprimir caracter
+                     
+                     if (isprint(mv[i]))
+                        printf("%c",mv[i]);
+                     else 
+                        printf(".");
+                  }
+
+                  aux=aux<<8;
+                  aux=aux|mv[i++]; //guarda en aux para ir armando el int
                }
-             printf("%d",aux);
+            if (reg[EAX]&0b10) //si tiene que imprimir caracter
+                  printf (" ");
+            if (reg[EAX]&0b1) 
+             printf("#%d ",aux);
+
+            if (reg[EAX]&0b100)
+             printf("@%o ",aux);
+
+            if (reg[EAX]&0b1000)
+             printf("%%%X",aux);
+            
+            printf("\n");
             }
-         break;
-
-         case 2: //interpreta decimal
+ ////        break;
+/*
+         case 2: //interpreta caracter
             for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
               aux=0;
+              printf("[%04C]:",i);
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  aux=aux<<4;
+                  aux=aux<<8;
                   aux=aux|ds[i++]; //guarda en aux para despues recortar
                }
-             printf("%c",aux);
+             printf("%c\n",aux);
             }
          break;
 
          case 4: // interpreta octal
             for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
               aux=0;
+              printf("[%04O]:",i);
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  aux=aux<<4;
+                  aux=aux<<8;
                   aux=aux|ds[i++]; //guarda en aux para despues recortar
                }
-             printf("%o",aux);
+             printf("%o\n",aux);
             }
          break;
 
          case 8: // interpreta Hexa
             for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
               aux=0;
+              printf("[%04X]:",i);
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  aux=aux<<4;
+                  aux=aux<<8;
                   aux=aux|ds[i++]; //guarda en aux para despues recortar
                }
-             printf("%x",aux);
+             printf("%x\n",aux);
             }
          break;
 
       default:
-         printf("\nError, valor de operacion para SYS invalido\n op1 vale %d y al vale %d",*op1,reg[EAX]&0b0000011);
+         printf("\nError, valor de operacion para SYS invalido\n");
          exit(-3);
          break;
       }
+      */
    }
 
    else {
@@ -836,61 +986,72 @@ void SYS(tppar op1,tppar op2) { ///48  terminado?
 
 }
 void JMP(tppar op1,tppar op2) { ///49
-// printf("%s",__func__);
+//printf("%s",__func__);
 
    reg[IP]=*op1;
 }
 void JZ(tppar op1,tppar op2) { ///50
-// printf("%s",__func__);
+//printf("%s",__func__);
 
-   if (reg[CC]== 1)
+   if (((reg[CC]>>30)&0b11)== 1)
       reg[IP]=*op1;
 }
 void JP(tppar op1,tppar op2) { ///51
-// printf("%s",__func__);
+//printf("%s",__func__);
 
-   if (reg[CC]==0)
+   if (((reg[CC]>>30)&0b11)==0)
       reg[IP]=*op1;
 }
 void JN(tppar op1,tppar op2) { ///52
-// printf("%s",__func__);
+//printf("%s",__func__);
 
-   if (reg[CC]==2)
+   if (((reg[CC]>>30)&0b11)==2)
       reg[IP]=*op1;
 }
 void JNZ(tppar op1,tppar op2) { ///53
-// printf("%s",__func__);
+//printf("%s",__func__);
 
-   if (reg[CC]!=1)
+   if (((reg[CC]>>30)&0b11)!=1)
       reg[IP]=*op1;
 }
 void JNP(tppar op1,tppar op2) { ///54
-// printf("%s",__func__);
+//printf("%s",__func__);
 
-   if (reg[CC]!=0)
+   if (((reg[CC]>>30)&0b11)!=0)
       reg[IP]=*op1;
 }
 void JNN(tppar op1,tppar op2) { ///55
-// printf("%s",__func__);
+//printf("%s",__func__);
 
-   if (reg[CC]!=2)
+   if (((reg[CC]>>30)&0b11)!=2)
       reg[IP]=*op1;
 }
 void LDL(tppar op1,tppar op2) { //56
-// printf("%s",__func__);
+//printf("%s",__func__);
+
+   tpar aux=*op1;
+   aux&=0x0000FFFF;
+   reg[AC]&=0xFFFF0000;
+   reg[AC]|=aux;
 
 }
 void LDH(tppar op1,tppar op2) { //57
-// printf("%s",__func__);
+//printf("%s",__func__);
+
+   tpar aux=*op1;
+   aux&=0x0000FFFF;
+   aux<<=16;
+   reg[AC]&=0x0000FFFF;
+   reg[AC]|=aux;
 
 }
 void RND(tppar op1,tppar op2) { //58
-// printf("%s",__func__);
+//printf("%s",__func__);
 
-reg[AC]=rand();
+reg[AC]=rand() % (*op1 + 1);
 }
 void NOT(tppar op1,tppar op2) { //59
-// printf("%s",__func__);
+//printf("%s",__func__);
 
    *op1= ~*op1;
 
@@ -900,17 +1061,17 @@ void NOT(tppar op1,tppar op2) { //59
       reg[CC]=2;
    else
       reg[CC]=0;
+      reg[CC]<<=30;
 
 }
 void STOP(tppar op1,tppar op2){
-   // printf("%s",__func__);
+   //printf("%s",__func__);
 
    reg[IP] = *op1+1; //pone el ip en cant instrucciones +1
 
 
 }
-
-void leeArchivoBinario(unsigned char cs[], int *cantInstrucciones, char *nombre_archivo){
+void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m){
 
 
 
@@ -923,7 +1084,7 @@ void leeArchivoBinario(unsigned char cs[], int *cantInstrucciones, char *nombre_
     short espacioCode;
 
     int i = 0;
-    unsigned char byte;
+    unsigned char byte,version;
 
     fread(&byte, sizeof(byte), 1, arch);
     //  printf("%c",byte);
@@ -936,128 +1097,68 @@ void leeArchivoBinario(unsigned char cs[], int *cantInstrucciones, char *nombre_
     fread(&byte, sizeof(byte), 1, arch);
    //   printf("%c ",byte);
     fread(&byte, sizeof(byte), 1, arch);
-  //    printf("%d ",byte);
+    version=byte;
+   
+
+   if (version==1){
+    fread(&byte,sizeof(char),1,arch);
+    espacioCode=byte;
+    espacioCode<<=8;
+    fread(&byte,sizeof(char),1,arch);
+    espacioCode|=byte;
+
+
 
     printf("\n \n");
     tdds[0]   = 0x0000; //posicion del code segment
     tdds[0] <<= 16;
-    fread(&espacioCode, sizeof(short), 1, arch);
+   
     //  printf("%x ",*cantInstrucciones); --> quedo de antes (no lo saco por las dudas)
     tdds[0] |= espacioCode; //tamano del code segment
    // printf("code segment: %X \n",tdds[0]);
 
-    tdds[1]   = 0x0001; //posicion del data segment
+    tdds[1]   = espacioCode; // posicion del data segment
     tdds[1] <<= 16;
-    tdds[1]  |= (csSize - espacioCode); //tamano del data segment
+    tdds[1]  |= (DS_SIZE - espacioCode); //tamano del data segment
   //  printf("data segment: %X \n\n",tdds[1]);
 
-    while (fread(&byte, sizeof(byte), 1, arch)) {
+   if (espacioCode>m){
+      printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
+      exit(-404);
+      }
 
-        cs[i++]=byte;
+   while (fread(&byte, sizeof(byte), 1, arch)) {
+
+         mv[i++]=byte;
 
        // printf("%x ",CS[i++]);
-    }
+   }
+   if (i>espacioCode){
+     printf("Error de segmentacion en CS");
+     exit(-3);
+   }
    *cantInstrucciones=i;
  //   printf("%d \n",*cantInstrucciones);
+   }
+   else if (version==2){
+
+   }
+
+   else{
+      printf("Numero de version no soportado");
+      exit(23);
+   }
     fclose(arch);
 }
 
-//void inicializaRegistros(unsigned char CS[], unsigned char TDDS[], unsigned char Reg[]){
+void inicializaRegistros(int tamano_mv){
 
+   reg[CS]=0x00000000;
+   reg[DS]=0x00010000;
+   reg[KS]=0x00020000;
+   reg[ES]=0x00030000;
+   reg[SS]=0x00040000;
+   reg[SP]=tamano_mv;
+   reg[BP]=reg[SP];
 
-
-//}
-
-//    else{ //aca empieza el bardo
-//       switch (treg1)
-//       {
-//          case 0: //el primero no es registro o no esta cortado = EAX
-//             switch (treg2) //el segundo reg  es la parte baja = EL
-//             {
-//                case 1:
-//                   *op1=*op2&255;
-//                break;
-//                case 2:  //el segundo reg es la parte alta = EH
-//                   *op1=(*op2>>8)&0x000000FF;
-//                break;
-//                case 3: //el segundo reg es toda la mitad = EX
-//                      *op1=*op2&0x0000FFFF;
-//                break;
-//             }
-//          break;
-//          case 1: //treg1
-//             *op1&=0xFFFFFF00; // limpia los dos bytes menos significativos y luego hace OR al final con el valor que corresponda en op2 (000000FF)
-//             switch (treg2)
-//             {
-//                case 0:
-//                   *op2&=0x0000000FF;// trunca
-//                break;
-
-//                case 1: //el segundo es la parte baja EC
-//                   *op2&=0x0000000FF;  //limpia
-//                break;
-
-//                case 2:  //el segundo es la parte alta EL
-//                   (*op2>>8)&0x0000FF00; // y lo corro
-//                break;
-
-//                case 3: //el segundo es toda la mitad EX
-//                   *op2&=0x0000000FF; // trunca
-//                break;
-//             }
-
-//             *op1|=*op2;
-//          break;
-
-//          case 2: //treg1
-
-//             *op1&=0xFFFF00FF; // limpia el byte y luego hace OR al final con el valor que corresponda en op2 (0000FF00)
-
-//             switch (treg2){
-//                case 0:
-//                   *op2&=0x0000000FF; // trunca
-//                   *op2<<= 8;
-//                break;
-
-//                case 1: //el segundo es la parte baja EL
-//                   *op2&=0x0000000FF; // limpia
-//                   *op2<<= 8;
-//                break;
-
-//                case 2:  //el segundo es la parte alta EH
-//                   (*op2)&=0x0000FF00;
-//                break;
-
-//                case 3: //el segundo es toda la mitad EX
-//                   *op2&=0x0000000FF; // trunca
-//                   *op2<<= 8;
-//                break;
-//             }
-//             *op1|=*op2;
-//          break;
-
-//          case 3: //treg1
-
-//             switch (treg2){
-//                case 0:
-//                   *op2&=0x00000FFFF; // trunca
-//                break;
-
-//                case 1: //el segundo es la parte baja EL
-//                   *op2&=0x0000000FF; // limpia
-//                break;
-
-//                case 2:  //el segundo es la parte alta EH
-//                   (*op2)&=0x0000FF00;
-//                   *op2>>=8;
-//                break;
-
-//                case 3: //el segundo es toda la mitad EX
-//                   *op2&=0x00000FFFF; // trunca
-//                break;
-//             }
-//             *op1|=*op2;
-//          break;
-//       }
-//    }
-// }
+}
