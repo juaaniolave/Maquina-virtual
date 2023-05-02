@@ -31,8 +31,9 @@
 typedef int tpar;
 typedef tpar* tppar;
 
-void leeArchivoBinario(unsigned char[], int* ,char*,int);
-void inicializaRegistros(int);
+void inicializaFunciones(void (*funciones[cantFunciones])(tppar,tppar));
+void leeArchivoBinario(unsigned char[], int* ,char*,int, char*);
+void inicializaRegistros(int,char);
 void dissasambly(unsigned char[],int);
 
 void MOV(tppar,tppar);
@@ -59,17 +60,27 @@ void LDL(tppar,tppar);
 void LDH(tppar,tppar);
 void RND(tppar,tppar);
 void NOT(tppar,tppar);
+void PUSH(tppar,tppar);
+void POP(tppar,tppar);
+void CALL(tppar,tppar);
 void STOP(tppar,tppar);
+void RET(tppar,tppar);
+
 
 
 unsigned char* mv;
 int reg[cantRegistros]={0}; //registros, variable global para que cualquier funcion pueda modificarlos
-unsigned int tdds[TDDS_SIZE]; //Tabla de descriptores de segmentos ESTABA DECLARADO DOS VECES
+unsigned int tdds[TDDS_SIZE]; 
 
 int main(int argc, char *argv[]) {
 
    char* extension=".vmx";
    char *nombre_archivo = "fibo.vmx";
+   char version=0;
+   int cantInstrucciones=0;
+
+   void (*funciones[cantFunciones])(tppar,tppar)={NULL};
+   inicializaFunciones(funciones);
 
    for (int i = 1; i < argc; i++) {
       char *param = argv[i];
@@ -82,41 +93,6 @@ int main(int argc, char *argv[]) {
    printf("Por favor indique el nombre del archivo");
    exit(-4);
    }
-
-  
-
-   int cantInstrucciones=0; //tama�o logico de cs
-
-   void (*funciones[cantFunciones])(tppar,tppar)={NULL};
-   funciones[0]=MOV;
-   funciones[1]=ADD;
-   funciones[2]=SUB;
-   funciones[3]=SWAP;
-   funciones[4]=MUL;
-   funciones[5]=DIV;
-   funciones[6]=CMP;
-   funciones[7]=SHL;
-   funciones[8]=SHR;
-   funciones[9]=AND;
-   funciones[10]=OR;
-   funciones[11]=XOR;
-   funciones[48]=SYS;
-   funciones[49]=JMP;
-   funciones[50]=JZ;
-   funciones[51]=JP;
-   funciones[52]=JN;
-   funciones[53]=JNZ;
-   funciones[54]=JNP;
-   funciones[55]=JNN;
-   funciones[56]=LDL;
-   funciones[57]=LDH;
-   funciones[58]=RND;
-   funciones[59]=NOT;
-   funciones[60]=PUSH;
-   funciones[61]=POP;
-   funciones[62]=CALL;
-   funciones[240]=STOP;
-   funciones[241]=RET;
 
    //RECUPERO TAMAÑO DEL MV
 
@@ -132,7 +108,7 @@ int main(int argc, char *argv[]) {
    mv = (char*)malloc(sizeof(char)*m);
    
 
-   leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m); // lee el archivo binario y carga las instrucciones en el codesegment
+   leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m,&version); // lee el archivo binario y carga las instrucciones en el codesegment
 
 // BUSCA PARAMETRO -d
    for (int i = 1; i < argc; i++) { // El primer argumento es el nombre del programa
@@ -143,7 +119,7 @@ int main(int argc, char *argv[]) {
    }
 
 
-   inicializaRegistros(m);
+   inicializaRegistros(m,version);
 
    //programa principal
    unsigned short posMemA, posMemB;
@@ -442,7 +418,39 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+void inicializaFunciones(void (*funciones[cantFunciones])(tppar,tppar)){
+   
+   funciones[0]=MOV;
+   funciones[1]=ADD;
+   funciones[2]=SUB;
+   funciones[3]=SWAP;
+   funciones[4]=MUL;
+   funciones[5]=DIV;
+   funciones[6]=CMP;
+   funciones[7]=SHL;
+   funciones[8]=SHR;
+   funciones[9]=AND;
+   funciones[10]=OR;
+   funciones[11]=XOR;
+   funciones[48]=SYS;
+   funciones[49]=JMP;
+   funciones[50]=JZ;
+   funciones[51]=JP;
+   funciones[52]=JN;
+   funciones[53]=JNZ;
+   funciones[54]=JNP;
+   funciones[55]=JNN;
+   funciones[56]=LDL;
+   funciones[57]=LDH;
+   funciones[58]=RND;
+   funciones[59]=NOT;
+   funciones[60]=PUSH;
+   funciones[61]=POP;
+   funciones[62]=CALL;
+   funciones[240]=STOP;
+   funciones[241]=RET;
 
+}
 
 void dissasambly(unsigned char cs[],int cantidadInstrucciones){
    char funciones[256][5];
@@ -700,7 +708,7 @@ void MOV(tppar op1,tppar op2){ ///0
     *op1=*op2;
 
 }
- void ADD(tppar op1,tppar op2){ ///1
+void ADD(tppar op1,tppar op2){ ///1
  //printf("%s",__func__);
 
      *op1+=*op2;
@@ -1064,6 +1072,13 @@ void NOT(tppar op1,tppar op2) { //59
       reg[CC]<<=30;
 
 }
+void PUSH(tppar op1,tppar op2){
+}
+void POP(tppar op1,tppar op2){
+}
+void CALL(tppar op1,tppar op2){
+}
+
 void STOP(tppar op1,tppar op2){
    //printf("%s",__func__);
 
@@ -1071,7 +1086,9 @@ void STOP(tppar op1,tppar op2){
 
 
 }
-void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m){
+void RET(tppar op1,tppar op2){
+}
+void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m, char* version){
 
 
 
@@ -1084,7 +1101,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
     short espacioCode;
 
     int i = 0;
-    unsigned char byte,version;
+    unsigned char byte;
 
     fread(&byte, sizeof(byte), 1, arch);
     //  printf("%c",byte);
@@ -1097,19 +1114,16 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
     fread(&byte, sizeof(byte), 1, arch);
    //   printf("%c ",byte);
     fread(&byte, sizeof(byte), 1, arch);
-    version=byte;
+    *version=byte;
    
 
-   if (version==1){
+   if (*version==1){
     fread(&byte,sizeof(char),1,arch);
     espacioCode=byte;
     espacioCode<<=8;
     fread(&byte,sizeof(char),1,arch);
     espacioCode|=byte;
 
-
-
-    printf("\n \n");
     tdds[0]   = 0x0000; //posicion del code segment
     tdds[0] <<= 16;
    
@@ -1128,7 +1142,10 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
       }
 
    while (fread(&byte, sizeof(byte), 1, arch)) {
-
+         if(i+1>m){
+            printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
+            exit(-404);
+         }
          mv[i++]=byte;
 
        // printf("%x ",CS[i++]);
@@ -1140,8 +1157,47 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
    *cantInstrucciones=i;
  //   printf("%d \n",*cantInstrucciones);
    }
-   else if (version==2){
+   
+   else if (*version==2){
 
+      short memoriaOffset=0; 
+
+      for (char k=0; k<5; k++){ //inicializa los tdds
+         fread(&byte,sizeof(char),1,arch);
+         espacioCode=byte;
+         espacioCode<<=8;
+         fread(&byte,sizeof(char),1,arch);
+         espacioCode|=byte;
+
+         tdds[k]  = memoriaOffset; 
+         tdds[k] <<= 16;
+         
+         
+         tdds[k] |= espacioCode;
+        
+
+         memoriaOffset+=espacioCode;
+   }
+
+      if (espacioCode>m){
+         printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
+         exit(-404);
+         }
+
+      while (fread(&byte, sizeof(byte), 1, arch)) {
+            if(i+1>m){
+               printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
+            exit(-404);
+         }
+         mv[i++]=byte;
+
+       // printf("%x ",CS[i++]);
+   }
+   if (i>espacioCode){
+     printf("Error de segmentacion en CS");
+     exit(-3);
+   }
+   *cantInstrucciones=i;
    }
 
    else{
@@ -1151,14 +1207,41 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
     fclose(arch);
 }
 
-void inicializaRegistros(int tamano_mv){
+void inicializaRegistros(int tamano_mv, char version){
 
-   reg[CS]=0x00000000;
-   reg[DS]=0x00010000;
-   reg[KS]=0x00020000;
-   reg[ES]=0x00030000;
-   reg[SS]=0x00040000;
-   reg[SP]=tamano_mv;
-   reg[BP]=reg[SP];
+   if (version==1){
+      reg[CS]=0x00000000;
+      reg[DS]=0x00010000;
+
+   }
+   else if (version == 2){
+      if (tdds[0]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
+         reg[CS]=0x00000000;
+      else
+         reg[CS]=-1;
+
+      if (tdds[1]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
+         reg[KS]=0x00010000;
+      else
+         reg[KS]=-1;
+
+      if (tdds[2]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
+         reg[DS]=0x00020000;      
+      else
+         reg[DS]=-1;
+
+      if (tdds[3]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
+         reg[ES]=0x00030000;
+      else
+         reg[ES]=-1;
+
+      if (tdds[4]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
+         reg[SS]=0x00040000;
+      else
+         reg[SS]=-1;
+         
+      reg[SP]=reg[SS] + tdds[4]&0xFFFF; //inicio del StackSegment + offset (va al final el puntero)
+      reg[BP]=reg[SP];
+   }
 
 }
