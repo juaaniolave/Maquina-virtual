@@ -106,6 +106,7 @@ int main(int argc, char *argv[]) {
    }
    //ASIGNO TAMAÑO AL MV
    mv = (char*)malloc(sizeof(char)*m);
+   memset(mv, 0, m); //inicializa en 0 todo mv
    
 
    leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m,&version); // lee el archivo binario y carga las instrucciones en el codesegment
@@ -844,14 +845,12 @@ void XOR(tppar op1,tppar op2) { ///11 o B
       reg[CC]=0;
       reg[CC]<<=30;
 }
-void SYS(tppar op1,tppar op2) { ///48  terminado?
+void SYS(tppar op1,tppar op2) { ///48 
 //printf("%s",__func__);
  int i;
  unsigned int aux,k;
 
-
    if (*op1 == 1){ //scanf
-  // printf("\ningrese algun valor: ");
       switch (reg[EAX]&0b0001111) {
 
          case 1: //interpreta decimal
@@ -903,12 +902,8 @@ void SYS(tppar op1,tppar op2) { ///48  terminado?
 
    }
 
-   else if(*op1==2){ //printf
-      //printf("\n\n");
+   else if(*op1==2){ 
 
-      // switch (reg[EAX]&0b00001111) {
-
-        // case 1: //interpreta decimal
             for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
               aux=0;
             printf("[%04X]:",i-(tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);
@@ -941,50 +936,6 @@ void SYS(tppar op1,tppar op2) { ///48  terminado?
             
             printf("\n");
             }
- ////        break;
-/*
-         case 2: //interpreta caracter
-            for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
-              aux=0;
-              printf("[%04C]:",i);
-               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  aux=aux<<8;
-                  aux=aux|ds[i++]; //guarda en aux para despues recortar
-               }
-             printf("%c\n",aux);
-            }
-         break;
-
-         case 4: // interpreta octal
-            for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
-              aux=0;
-              printf("[%04O]:",i);
-               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  aux=aux<<8;
-                  aux=aux|ds[i++]; //guarda en aux para despues recortar
-               }
-             printf("%o\n",aux);
-            }
-         break;
-
-         case 8: // interpreta Hexa
-            for (i=reg[EDX];i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+reg[EDX];){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
-              aux=0;
-              printf("[%04X]:",i);
-               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  aux=aux<<8;
-                  aux=aux|ds[i++]; //guarda en aux para despues recortar
-               }
-             printf("%x\n",aux);
-            }
-         break;
-
-      default:
-         printf("\nError, valor de operacion para SYS invalido\n");
-         exit(-3);
-         break;
-      }
-      */
    }
 
    else {
@@ -1222,10 +1173,6 @@ void inicializaRegistros(int tamano_mv, char version){
       reg[DS]=0x00020000;    
       reg[ES]=0x00030000;  
       reg[SS]=0x00040000;
-      reg[SP]=reg[SS] + tdds[4]&0xFFFF; //inicio del StackSegment + offset (va al final el puntero)
-      reg[BP]=reg[SP];
-
-
 
    if (tdds[0]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
       reg[CS]=-1;
@@ -1268,4 +1215,7 @@ void inicializaRegistros(int tamano_mv, char version){
    if (tdds[4]&0xFFFF<=0) //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
       reg[SS]=-1;  
    }
+
+      reg[SP]=reg[SS] + tdds[reg[SS]>>16]&0xFFFF; //inicio del StackSegment + offset (el puntero va al final del segmento )
+      reg[BP]=reg[SP];
 }
