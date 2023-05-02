@@ -1214,34 +1214,58 @@ void inicializaRegistros(int tamano_mv, char version){
       reg[DS]=0x00010000;
 
    }
+
+
    else if (version == 2){
-      if (tdds[0]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
-         reg[CS]=0x00000000;
-      else
-         reg[CS]=-1;
-
-      if (tdds[1]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
-         reg[KS]=0x00010000;
-      else
-         reg[KS]=-1;
-
-      if (tdds[2]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
-         reg[DS]=0x00020000;      
-      else
-         reg[DS]=-1;
-
-      if (tdds[3]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
-         reg[ES]=0x00030000;
-      else
-         reg[ES]=-1;
-
-      if (tdds[4]&0xFFFF>0) //si el tamaño del segmento es mayor a 0
-         reg[SS]=0x00040000;
-      else
-         reg[SS]=-1;
-         
+      reg[CS]=0x00000000;
+      reg[KS]=0x00010000;
+      reg[DS]=0x00020000;    
+      reg[ES]=0x00030000;  
+      reg[SS]=0x00040000;
       reg[SP]=reg[SS] + tdds[4]&0xFFFF; //inicio del StackSegment + offset (va al final el puntero)
       reg[BP]=reg[SP];
+
+
+
+   if (tdds[0]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+      reg[CS]=-1;
+      reg[KS]-=0x00010000;
+      reg[DS]-=0x00010000;    
+      reg[ES]-=0x00010000;  
+      reg[SS]-=0x00010000;
+
+      tdds[0]=tdds[1];
+      tdds[1]=tdds[2];
+      tdds[2]=tdds[3];
+      tdds[3]=tdds[4];
    }
 
+   if (tdds[1]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+      reg[KS]=-1;
+      reg[DS]-=0x00010000;    
+      reg[ES]-=0x00010000;  
+      reg[SS]-=0x00010000;
+
+      tdds[1]=tdds[2];
+      tdds[2]=tdds[3];
+      tdds[3]=tdds[4];
+   }
+   if (tdds[2]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+      reg[DS]=-1;
+      reg[ES]-=0x00010000;  
+      reg[SS]-=0x00010000;
+
+      tdds[2]=tdds[3];
+      tdds[3]=tdds[4];
+   }
+   if (tdds[3]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+      reg[ES]=-1;
+      reg[SS]-=0x00010000;
+
+      tdds[3]=tdds[4];
+   }
+
+   if (tdds[4]&0xFFFF<=0) //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+      reg[SS]=-1;  
+   }
 }
