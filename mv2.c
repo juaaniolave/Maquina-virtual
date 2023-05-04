@@ -68,7 +68,8 @@ void RET(tppar,tppar);
 
 
 
-unsigned char* mv;
+//unsigned char* mv;
+unsigned char mv[MV_SIZE];
 int reg[cantRegistros]={0}; //registros, variable global para que cualquier funcion pueda modificarlos
 unsigned int tdds[TDDS_SIZE]; 
 
@@ -105,8 +106,8 @@ int main(int argc, char *argv[]) {
        }
    }
    //ASIGNO TAMAÑO AL MV
-   mv = (char*)malloc(sizeof(char)*m);
-   memset(mv, 0, m); //inicializa en 0 todo mv
+   //mv = (char*)malloc(sizeof(char)*m);
+  // memset(mv, 0, m); //inicializa en 0 todo mv
    
 
    leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m,&version); // lee el archivo binario y carga las instrucciones en el codesegment
@@ -130,6 +131,8 @@ int main(int argc, char *argv[]) {
    unsigned char codOp, tOpA,tOpB; //codigo de operacion, tipo op1, tipo op2
    tpar op1,op2; //operandos
    tppar pOp1, pOp2; //punteros a los operandos
+   char sizeA,sizeB; // cantidad de bytes para operar en memoria
+
 
    printf("\n");
 
@@ -149,7 +152,6 @@ int main(int argc, char *argv[]) {
          if (tOpA == 3){  // cod operacion 1111 sin operandos
             codOp = mv[reg[IP]++];
             funciones[codOp](&cantInstrucciones,0);
-            exit(1);
          }
          else { //cod op xx11 1 operando
             codOp = mv[reg[IP]++] & 63; // &00111111
@@ -171,7 +173,20 @@ int main(int argc, char *argv[]) {
 
       //   printf("%02X ",cs[reg[IP]]);
 
-         auxA = ((tdds[((reg[mv[reg[IP]]])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+      switch (((mv[reg[IP]])>>6)&0xFF) { //si es long(l), word(w) o byte(b)
+         
+         case 0b00:
+            sizeA=4;
+            break;
+         case 0b01:
+            sizeA=2;
+            break;
+         case 0b11:
+            sizeA=1;
+            break;
+         }
+         
+         auxA = ((tdds[((reg[(mv[reg[IP]])&0x000000FF])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
          auxA +=((reg[mv[reg[IP]++]])&0x0000FFFF);
 
          posMemA = mv[reg[IP]++];
@@ -188,9 +203,9 @@ int main(int argc, char *argv[]) {
              exit(-420);
           }
 
-         op1 = 0; //limpio
+         op1 = 0; //limpio 
 
-         for (int j = 0; j < 4 ; j++){ //recorta y almacena las 4 celdas de memoria en op1
+         for (int j = 0; j < sizeA ; j++){ //recorta y almacena las celdas de memoria en op1
             op1 <<= 8;
             op1 |= mv[posMemA + j]; // primero es ds[posMem + 0]
          }
@@ -246,8 +261,21 @@ int main(int argc, char *argv[]) {
          int auxB;
       //   printf("%02X ",cs[reg[IP]]);
 
-         auxB = ((tdds[((reg[mv[reg[IP]]])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
-          auxB +=((reg[mv[reg[IP]++]])&0x0000FFFF);
+      switch (((mv[reg[IP]])>>6)&0xFF) { //si es long(l), word(w) o byte(b)
+         
+         case 0b00:
+            sizeB=4;
+            break;
+         case 0b01:
+            sizeB=2;
+            break;
+         case 0b11:
+            sizeB=1;
+            break;
+         }
+         
+         auxB = ((tdds[((reg[(mv[reg[IP]])&0x000000FF])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+         auxB +=((reg[mv[reg[IP]++]])&0x0000FFFF);
 
          posMemB = mv[reg[IP]++];
          posMemB <<= 8;
@@ -265,7 +293,7 @@ int main(int argc, char *argv[]) {
 
 
          op2=0; //limpio
-         for (int j = 0; j < 4 ; j++){ //recorta y almacena las 4 celdas de memoria en op1
+         for (int j = 0; j < sizeB ; j++){ //recorta y almacena las celdas de memoria en op2
             op2 <<= 8;
             op2 |= mv[posMemB + j]; // primero es ds[posMem + 0]
          }
@@ -351,31 +379,33 @@ int main(int argc, char *argv[]) {
          }
    }
    else
-      if (tOpA == 0)
+      if (tOpA == 0){
 
-         { // tOpA == 0, de memoria
-         //mem1 = (char)(0xFF & *pOp1);
 
-         // ds[posMemA]     = (char)(0xFF000000 & *pOp1);
-         // ds[posMemA + 1] = (char)(0x00FF0000 & *pOp1);
-         // ds[posMemA + 2] = (char)(0x0000FF00 & *pOp1);
-         // ds[posMemA + 3] = (char)(0x000000FF & *pOp1);
-         mv[posMemA]     = (0xFF000000 & *pOp1)>>24;
-         mv[posMemA + 1] = (0x00FF0000 & *pOp1)>>16;
-         mv[posMemA + 2] = (0x0000FF00 & *pOp1)>>8;
-         mv[posMemA + 3] = (0x000000FF & *pOp1);
+         for (int j = sizeA-1; j >= 0 ; j--){ //recorta y almacena las celdas de memoria en op2
+            mv[posMemA + j] = ((*pOp1)&0x000000FF);
+            *pOp1>>=8;
+         }
+
+         
+         // mv[posMemA]     = (0xFF000000 & *pOp1)>>24;
+         // mv[posMemA + 1] = (0x00FF0000 & *pOp1)>>16;
+         // mv[posMemA + 2] = (0x0000FF00 & *pOp1)>>8;
+         // mv[posMemA + 3] = (0x000000FF & *pOp1);
 
       }
    if (codOp == 3) { //codOP 3 = SWAP
       if (tOpB == 0) {
-         // ds[posMemB]     = (char)(0xFF000000 & *pOp2);
-         // ds[posMemB + 1] = (char)(0x00FF0000 & *pOp2);
-         // ds[posMemB + 2] = (char)(0x0000FF00 & *pOp2);
-         // ds[posMemB + 3] = (char)(0x000000FF & *pOp2);
-         mv[posMemB]     = (0xFF000000 & *pOp2)>>24;
-         mv[posMemB + 1] = (0x00FF0000 & *pOp2)>>16;
-         mv[posMemB + 2] = (0x0000FF00 & *pOp2)>>8;
-         mv[posMemB + 3] = (0x000000FF & *pOp2);
+
+         for (int j = sizeB-1; j >= 0 ; j--){ //recorta y almacena las celdas de memoria en op2
+            mv[posMemB + j] = ((*pOp2)&0x000000FF);
+            *pOp2>>=8;
+         }
+
+         // mv[posMemB]     = (0xFF000000 & *pOp2)>>24;
+         // mv[posMemB + 1] = (0x00FF0000 & *pOp2)>>16;
+         // mv[posMemB + 2] = (0x0000FF00 & *pOp2)>>8;
+         // mv[posMemB + 3] = (0x000000FF & *pOp2);
 
 
 
@@ -483,16 +513,20 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
    strcpy(funciones[57],"LDH");
    strcpy(funciones[58],"RND");
    strcpy(funciones[59],"NOT");
+   strcpy(funciones[60],"push");
+   strcpy(funciones[61],"pop");
+   strcpy(funciones[62],"call");
    strcpy(funciones[240],"STOP");
+   strcpy(funciones[241],"ret");
 
    strcpy(registros[0],"cs");
    strcpy(registros[1],"ds");
-   //strcpy(registros[2],"");
-   //strcpy(registros[3],"");
-   //strcpy(registros[4],"");
+   strcpy(registros[2],"ks");
+   strcpy(registros[3],"es");
+   strcpy(registros[4],"ss");
    strcpy(registros[5],"IP");
-   //strcpy(registros[6],"");
-   //strcpy(registros[7],"");
+   strcpy(registros[6],"sp");
+   strcpy(registros[7],"bp");
    strcpy(registros[8],"CC");
    strcpy(registros[9],"AC");
    strcpy(registros[10],"EAX");
@@ -615,17 +649,32 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
       printf ("%s \t\t",strlwr(funciones[codOp]));
 
       if (tOpA==0){
-         // if((op1)&255!=0)
-         //    printf("[%s + %d]\t",strlwr(registros[(op1>>16)&15]), (op1)&255);
-         // else
-         //    printf("[%s]\t",strlwr(registros[(op1>>16)&15]));
+
+         if ((op1>>30)&0b11 == 0b01){
+            printf("Instruccion invalida");
+            exit(-20);   
+         }
+
+         char size;
+         switch ((op1>>30)&0b11){ // los dos primero bits indican long(l), word(w) o byte(b)
+         case 0b00:
+            size = 'l';
+            break;
+         case 0b01:
+            size ='w';
+            break;
+         case 0b11:
+            size = 'b';
+            break;
+         }
+
          if ((op1)&0x00FFFF){
-         printf("[%s+%d], ",registros[(op1>>16)&0xFF],(op1)&0x00FFFF);
-         if ((op1)&0x00FFFF < 10 || (op1)&0x00FFFF > -10){};
+         printf("%c[%s+%d], ",size,registros[(op1>>16)&0xFF],(op1)&0x00FFFF);
+         if ((op1)&0x00FFFF < 10 || (op1)&0x00FFFF > -10){}; // al pedo?
          
          }
          else
-         printf("[%s],\t ",registros[(op1>>16)&0xFF]);
+         printf("%c[%s],\t ",size,registros[(op1>>16)&0xFF]);
       }
 
       else if (tOpA==1){
@@ -654,15 +703,28 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
          }
          printf("\t");
 
-            if (tOpB==0){
-         // if((op1)&255!=0)
-         //    printf("[%s + %d]\t",strlwr(registros[(op1>>16)&15]), (op1)&255);
-         // else
-         //    printf("[%s]\t",strlwr(registros[(op1>>16)&15]));
+         if (tOpB==0){
+            if ((op2>>30)&0b11 == 0b01){
+               printf("Instruccion invalida");
+               exit(-20);   
+            }
+
+            char size;
+            switch ((op2>>30)&0b11){ // los dos primero bits indican long(l), word(w) o byte(b)
+            case 0b00:
+               size = 'l';
+               break;
+            case 0b01:
+               size ='w';
+               break;
+            case 0b11:
+               size = 'b';
+               break;
+            };
             if ((op2)&0x00FFFF)
-         printf("[%s+%d],\t",registros[(op2>>16)&0xFF],(op2)&0x00FFFF);
+         printf("%c[%s+%d],\t",size,registros[(op2>>16)&0xFF],(op2)&0x00FFFF);
             else
-         printf("[%s],\t",registros[(op2>>16)&0xFF]);
+         printf("%c[%s],\t",size,registros[(op2>>16)&0xFF]);
          }
 
       else if (tOpB==1){
@@ -703,14 +765,14 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
 
 void MOV(tppar op1,tppar op2){ ///0
-   //printf("%s",__func__);
+   //printf("%s ",__func__);
 
    //no son partes cortas de registros
     *op1=*op2;
 
 }
 void ADD(tppar op1,tppar op2){ ///1
- //printf("%s",__func__);
+ //printf("%s ",__func__);
 
      *op1+=*op2;
 
@@ -722,7 +784,7 @@ void ADD(tppar op1,tppar op2){ ///1
        reg[CC]=0;
  }
 void SUB(tppar op1,tppar op2){ ///2
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
     *op1 -= *op2;
 
@@ -737,7 +799,7 @@ void SUB(tppar op1,tppar op2){ ///2
 
 }
 void SWAP(tppar op1,tppar op2){ ///3
-//printf("%s",__func__);
+//printf("%s ",__func__);
     tpar aux;
 
     aux  = *op1;
@@ -745,7 +807,7 @@ void SWAP(tppar op1,tppar op2){ ///3
     *op2 = aux;
 }
 void MUL(tppar op1,tppar op2) { ///4
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    (*op1) *= (*op2);
 
@@ -759,7 +821,7 @@ void MUL(tppar op1,tppar op2) { ///4
    reg[CC]<<=30;
 }
 void DIV(tppar op1,tppar op2) { ///5
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
 
    if (*op2 == 0) {
@@ -784,7 +846,7 @@ void DIV(tppar op1,tppar op2) { ///5
 
 }
 void CMP(tppar op1,tppar op2) { ///6
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
 
 
@@ -801,15 +863,15 @@ void CMP(tppar op1,tppar op2) { ///6
       reg[CC]<<=30;
 }
 void SHL(tppar op1,tppar op2) { ///7
-//printf("%s",__func__);
+//printf("%s ",__func__);
    *op1 = *op1 << *op2;
 }
 void SHR(tppar op1,tppar op2) { ///8
-//printf("%s",__func__);
+//printf("%s ",__func__);
    *op1 = *op1 >> *op2;
 }
 void AND(tppar op1,tppar op2) { ///9
-//printf("%s",__func__);
+//printf("%s ",__func__);
    *op1 = (*op1) & (*op2);
 
    if (*op1==0)
@@ -821,7 +883,7 @@ void AND(tppar op1,tppar op2) { ///9
       reg[CC]<<=30;
 }
 void OR(tppar op1,tppar op2) { ///10 o A
-//printf("%s",__func__);
+//printf("%s ",__func__);
     *op1 = (*op1) | (*op2);
 
    if (*op1==0)
@@ -833,7 +895,7 @@ void OR(tppar op1,tppar op2) { ///10 o A
       reg[CC]<<=30;
 }
 void XOR(tppar op1,tppar op2) { ///11 o B
-//printf("%s",__func__);
+//printf("%s ",__func__);
     *op1 = (*op1) ^ (*op2);
 
 
@@ -846,7 +908,7 @@ void XOR(tppar op1,tppar op2) { ///11 o B
       reg[CC]<<=30;
 }
 void SYS(tppar op1,tppar op2) { ///48 
-//printf("%s",__func__);
+//printf("%s ",__func__);
  int i;
  unsigned int aux,k;
 
@@ -945,48 +1007,48 @@ void SYS(tppar op1,tppar op2) { ///48
 
 }
 void JMP(tppar op1,tppar op2) { ///49
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    reg[IP]=*op1;
 }
 void JZ(tppar op1,tppar op2) { ///50
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    if (((reg[CC]>>30)&0b11)== 1)
       reg[IP]=*op1;
 }
 void JP(tppar op1,tppar op2) { ///51
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    if (((reg[CC]>>30)&0b11)==0)
       reg[IP]=*op1;
 }
 void JN(tppar op1,tppar op2) { ///52
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    if (((reg[CC]>>30)&0b11)==2)
       reg[IP]=*op1;
 }
 void JNZ(tppar op1,tppar op2) { ///53
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    if (((reg[CC]>>30)&0b11)!=1)
       reg[IP]=*op1;
 }
 void JNP(tppar op1,tppar op2) { ///54
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    if (((reg[CC]>>30)&0b11)!=0)
       reg[IP]=*op1;
 }
 void JNN(tppar op1,tppar op2) { ///55
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    if (((reg[CC]>>30)&0b11)!=2)
       reg[IP]=*op1;
 }
 void LDL(tppar op1,tppar op2) { //56
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -995,7 +1057,7 @@ void LDL(tppar op1,tppar op2) { //56
 
 }
 void LDH(tppar op1,tppar op2) { //57
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -1005,12 +1067,12 @@ void LDH(tppar op1,tppar op2) { //57
 
 }
 void RND(tppar op1,tppar op2) { //58
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
 reg[AC]=rand() % (*op1 + 1);
 }
 void NOT(tppar op1,tppar op2) { //59
-//printf("%s",__func__);
+//printf("%s ",__func__);
 
    *op1= ~*op1;
 
@@ -1029,11 +1091,10 @@ void POP(tppar op1,tppar op2){
 }
 void CALL(tppar op1,tppar op2){
 }
-
 void STOP(tppar op1,tppar op2){
-   //printf("%s",__func__);
+   //printf("%s ",__func__);
 
-   reg[IP] = *op1+1; //pone el ip en cant instrucciones +1
+   exit(1); 
 
 
 }
