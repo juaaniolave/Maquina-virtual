@@ -151,7 +151,6 @@ int main(int argc, char *argv[]) {
 
          if (tOpA == 3){  // cod operacion 1111 sin operandos
             codOp = mv[reg[IP]++];
-            funciones[codOp](&cantInstrucciones,0);
          }
          else { //cod op xx11 1 operando
             codOp = mv[reg[IP]++] & 63; // &00111111
@@ -1086,9 +1085,39 @@ void NOT(tppar op1,tppar op2) { //59
 
 }
 void PUSH(tppar op1,tppar op2){
+
+   reg[SP]-=4;
+   if (reg[SP]<reg[SS]){
+      printf("Error: Stack Overflow");
+      exit(-1000);     
+   }
+
+   int cualTdds=(reg[SP]>>16)&0x0000FFFF; // para claridad
+   int posMem=tdds[cualTdds]+reg[SP]&0x0000FFFF; //direccion de memoria del tope de la pila (-4 porque reste arriba)
+
+   for (int i = 0; i< 4; i++){
+      mv[posMem + i] = (*op1)>>(24-i*8);
+   }
 }
+
 void POP(tppar op1,tppar op2){
+      
+   if (reg[SP] >= (reg[SS] + ((tdds[(reg[SS])>>16])&0x0000FFFF))){ // si la pila esta vacia
+      printf("Error: Stack Underflow");
+      exit(-999);     
+   }
+
+   int cualTdds=(reg[SP]>>16)&0x0000FFFF; // para claridad
+   int posMem=tdds[cualTdds]+reg[SP]&0x0000FFFF; // direccion de memoria del tope de la pila
+
+   for (int i = 0; i< 4; i++){
+      (*op1)<<=8;
+      (*op1) |= mv[posMem + i];
+      
+   }
+   reg[SP]+=4;
 }
+
 void CALL(tppar op1,tppar op2){
 }
 void STOP(tppar op1,tppar op2){
