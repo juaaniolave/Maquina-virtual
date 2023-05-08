@@ -66,11 +66,11 @@ void STOP(tppar,tppar);
 void RET(tppar,tppar);
 
 
-
-//unsigned char* mv;
+//unsigned char mv[MV];
+unsigned char* mv;
 char debugger[30]="\0";
 char breakpoint=0;
-unsigned char mv[MV_SIZE];
+
 int reg[cantRegistros] = {0}; //registros, variable global para que cualquier funcion pueda modificarlos
 unsigned int tdds[TDDS_SIZE]; 
 
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 
    char* extension = ".vmx";
    char* extension2= ".vmi";
-   char *nombre_archivo = "fibo.vmx";
+   char *nombre_archivo=NULL;
    char version=0;
    int cantInstrucciones=0;
 
@@ -117,8 +117,8 @@ int main(int argc, char *argv[]) {
        }
    }
    //ASIGNO TAMAÑO AL MV
-   //mv = (char*)malloc(sizeof(char)*m);
-  // memset(mv, 0, m); //inicializa en 0 todo mv
+   mv = (char*)malloc(sizeof(char)*m);
+   memset(mv, 0, m); //inicializa en 0 todo mv
    
 
    leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m,&version); // lee el archivo binario y carga las instrucciones en el codesegment
@@ -634,7 +634,8 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
         // pOp2=&(reg[op2]);
 
       }
-
+      if (codOp== 60 || codOp ==61)
+      printf("\t");
       if (tOpA+tOpB < 2)
          printf("\t | \t");
       else
@@ -1329,7 +1330,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
       }
       if (espacioTotal>m){
-         printf ("No hay memoria suficiente para cargar todos los segmentos. Memoria necesaria: %d, memoria disponible:%d",m,espacioTotal);
+         printf ("No hay memoria suficiente para cargar todos los segmentos. Memoria necesaria: %dB, memoria disponible:%dB",espacioTotal,m);
          exit(-40);
       }
       if (espacioCode>m){
