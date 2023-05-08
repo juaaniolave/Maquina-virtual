@@ -4,8 +4,7 @@
 #include <ctype.h>
 
 
-#define DS_SIZE 1024*16 //1 KiB * 16 ) KiB
-#define CS_SIZE 1024*16
+#define CANT_SEGMENTOS 5
 #define MV_SIZE 1024*16
 #define cantRegistros 16
 #define TDDS_SIZE 8
@@ -69,6 +68,8 @@ void RET(tppar,tppar);
 
 
 //unsigned char* mv;
+char debugger[30]="\0";
+char breakpoint=0;
 unsigned char mv[MV_SIZE];
 int reg[cantRegistros] = {0}; //registros, variable global para que cualquier funcion pueda modificarlos
 unsigned int tdds[TDDS_SIZE]; 
@@ -76,6 +77,7 @@ unsigned int tdds[TDDS_SIZE];
 int main(int argc, char *argv[]) {
 
    char* extension = ".vmx";
+   char* extension2= ".vmi";
    char *nombre_archivo = "fibo.vmx";
    char version=0;
    int cantInstrucciones=0;
@@ -87,6 +89,14 @@ int main(int argc, char *argv[]) {
       char *param = argv[i];
       if (strstr(param, extension) != NULL) {
          nombre_archivo = param;
+         break;
+      }
+   }
+
+   for (int i = 1; i < argc; i++) {
+      char *param = argv[i];
+      if (strstr(param, extension2) != NULL) {
+         strcpy(debugger,param);
          break;
       }
    }
@@ -191,8 +201,8 @@ int main(int argc, char *argv[]) {
 
          posMemA += auxA; // offset += valor del reg, por ej [DS+10]
 
-          if (!((tdds[1])>>16)&0x0000FFFF <= posMemA && posMemA < ((tdds[1]>>16)&0x0000FFFF+((tdds[1] & 0x0000FFFF)) - 4) ) { //En la segunda parte puede que sea modificado (el 4)
-             printf("Error de segmentacion en DS\n");
+          if (!((tdds[(posMemA>>16)&0x0000FFFF])>>16)&0x0000FFFF <= posMemA && posMemA < ((tdds[(posMemA>>16)&0x0000FFFF]>>16)&0x0000FFFF+((tdds[(posMemA>>16)&0x0000FFFF] & 0x0000FFFF)) - sizeA) ) { //En la segunda parte puede que sea modificado (el 4)
+             printf("Error de segmentacion\n");
              exit(-420);
           }
 
@@ -279,8 +289,8 @@ int main(int argc, char *argv[]) {
 
          posMemB += auxB; // offset += valor del reg, por ej [DS+10]
          
-          if (!((tdds[1])>>16)&0x0000FFFF <= posMemB && posMemB < ((tdds[1]>>16)&0x0000FFFF+((tdds[1] & 0x0000FFFF)) - 4) ) { //En la segunda parte puede que sea modificado (el 4)
-             printf("Error de segmentacion en DS\n");
+          if (!((tdds[(posMemA>>16)&0x0000FFFF])>>16)&0x0000FFFF <= posMemB && posMemB < ((tdds[(posMemA>>16)&0x0000FFFF]>>16)&0x0000FFFF+((tdds[(posMemA>>16)&0x0000FFFF] & 0x0000FFFF)) - sizeB) ) { //En la segunda parte puede que sea modificado (el 4)
+             printf("Error de segmentacion\n");
              exit(-420);
           }
 
@@ -428,6 +438,9 @@ int main(int argc, char *argv[]) {
             break;
             }
          }
+   }
+      if (breakpoint==1){ //sigue ejecutando el breakpoint
+      funciones[48](15,0);
    }
 
 
@@ -1037,43 +1050,53 @@ void SYS(tppar op1,tppar op2) { ///48
                   system("cls"); 
                else
                   if (*op1 == 15) { //BREAKPOINT
-                     
-                     FILE *arch = fopen("Archivo_imagen.vmi","wb");
-                     unsigned char byte;
-                     char          identificador[6]; //6 por el caracter nulo, hace falta??
+                     if (debugger!=NULL){
+                        short tamanoMemoria = sizeof(*mv); // si no anda, se puede obtener el tamañno recorriendo el tdds
+                        
+                        FILE *arch = fopen(debugger,"wb");
+                           if (arch == NULL) {
+                           printf("Error al abrir el archivo.\n");
+                              exit (-409);
+                           }
 
-                     strcpy(identificador,"VMI23");
-                     fwrite(identificador, sizeof(identificador), 1, arch); //VA 1????
-                     byte = 1;
-                     fwrite(&byte, sizeof(byte), 1, arch);
-                     //fwrite de tamaño memoria principal (en 2 bytes)
+                           fwrite('v', sizeof(char), 1, arch);
+                           fwrite('m', sizeof(char), 1, arch);
+                           fwrite('i', sizeof(char), 1, arch);
+                           fwrite('2', sizeof(char), 1, arch);
+                           fwrite('3', sizeof(char), 1, arch);
+                           fwrite(2, sizeof(char), 1, arch);
+                           fwrite((tamanoMemoria>>16)&0x0000FFFF,sizeof(char), 1, arch);
+                           fwrite((tamanoMemoria)&0x0000FFFF,sizeof(char), 1, arch);
 
-                     for (int i = 0 ; i++ ; i < cantRegistros) 
-                        fwrite(reg[i], sizeof(int), 1, arch); //VA 1????
+                        for (int i = 0 ; i < cantRegistros ;i++) 
+                           for (int j=0; j++; j<4){
+                              fwrite((reg[i]>>24-j*8)&0x0000FFFF, sizeof(char), 1, arch); 
+                           }
+                        for (int i = 0 ; tdds[i]!=0; i++ )
+                           for (int j=0; j++; j<4)
+                              fwrite(tdds[j], sizeof(char), 1, arch); 
+                        
+                        for (int i = 0 ; i<tamanoMemoria; i++ )
+                              fwrite(mv[i], sizeof(char), 1, arch); 
 
-                     for (int j = 0 ; j++ ; j < TDDS_SIZE)
-                        fwrite(tdds[j], sizeof(int), 1, arch); //VA 1????
+                        printf("Breakpoint alcanzado. Se generó el archivo de imagen.\n");
 
-                     //fwrite de tamaño memoria principal (variable)
+                        // Esperar acciones del usuario
+                        char respuesta;
+                        printf("Presione 'q' para continuar o Enter para ejecutar la siguiente instrucción: \n");
+                        scanf(" %c", &respuesta);
 
-                     printf("Breakpoint alcanzado. Se generó el archivo de imagen.\n");
+                        // Evaluar la acción del usuario
+                        if (respuesta == 'q') {
+                           breakpoint=0;
+                        } 
+                        else { // ingreso Enter
+                           breakpoint=1;
+                        }
 
-                     // Esperar acciones del usuario
-                     char respuesta;
-                     printf("Presione 'q' para continuar o Enter para ejecutar la siguiente instrucción: \n");
-                     scanf(" %c", &respuesta);
+                     }  
 
-                     // Evaluar la acción del usuario
-                     if (respuesta == 'q') {
-                        mv[reg[IP++]];
-                     } 
-                     else { // ingreso Enter
-                        mv[reg[IP++]];
-                     }
-
-                  }  
-
-
+                  }
    else {
       printf("\nError! Parametro invalido en funcion SYS\n");
       exit(-2);
@@ -1255,7 +1278,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
     tdds[1]   = espacioCode; // posicion del data segment
     tdds[1] <<= 16;
-    tdds[1]  |= (DS_SIZE - espacioCode); //tamano del data segment
+    tdds[1]  |= (MV_SIZE - espacioCode); //tamano del data segment
   //  printf("data segment: %X \n\n",tdds[1]);
 
    if (espacioCode > m) {
@@ -1300,7 +1323,15 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
          memoriaOffset += espacioCode;
    }
+      int espacioTotal=0;
+      for (int k = 0;k<CANT_SEGMENTOS;k++){ //chequea espacio total
+         espacioTotal+=(tdds[k]&0x0000FFFF);
 
+      }
+      if (espacioTotal>m){
+         printf ("No hay memoria suficiente para cargar todos los segmentos. Memoria necesaria: %d, memoria disponible:%d",m,espacioTotal);
+         exit(-40);
+      }
       if (espacioCode>m){
          printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
          exit(-404);
@@ -1356,6 +1387,7 @@ void inicializaRegistros(int tamano_mv, char version){
       tdds[1]=tdds[2];
       tdds[2]=tdds[3];
       tdds[3]=tdds[4];
+      tdds[4]=0;
    }
 
    if (tdds[1]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
@@ -1367,6 +1399,7 @@ void inicializaRegistros(int tamano_mv, char version){
       tdds[1]=tdds[2];
       tdds[2]=tdds[3];
       tdds[3]=tdds[4];
+      tdds[4]=0;
    }
    if (tdds[2]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
       reg[DS]=-1;
@@ -1375,12 +1408,14 @@ void inicializaRegistros(int tamano_mv, char version){
 
       tdds[2]=tdds[3];
       tdds[3]=tdds[4];
+      tdds[4]=0;
    }
    if (tdds[3]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
       reg[ES]=-1;
       reg[SS]-=0x00010000;
 
       tdds[3]=tdds[4];
+      tdds[4]=0;
    }
 
    if (tdds[4]&0xFFFF<=0) //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
