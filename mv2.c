@@ -70,12 +70,12 @@ void RET(tppar,tppar);
 
 //unsigned char* mv;
 unsigned char mv[MV_SIZE];
-int reg[cantRegistros]={0}; //registros, variable global para que cualquier funcion pueda modificarlos
+int reg[cantRegistros] = {0}; //registros, variable global para que cualquier funcion pueda modificarlos
 unsigned int tdds[TDDS_SIZE]; 
 
 int main(int argc, char *argv[]) {
 
-   char* extension=".vmx";
+   char* extension = ".vmx";
    char *nombre_archivo = "fibo.vmx";
    char version=0;
    int cantInstrucciones=0;
@@ -90,7 +90,8 @@ int main(int argc, char *argv[]) {
          break;
       }
    }
-   if (nombre_archivo == NULL){
+   
+   if (nombre_archivo == NULL) {
    printf("Por favor indique el nombre del archivo");
    exit(-4);
    }
@@ -113,7 +114,7 @@ int main(int argc, char *argv[]) {
    leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m,&version); // lee el archivo binario y carga las instrucciones en el codesegment
 
 // BUSCA PARAMETRO -d
-   for (int i = 1; i < argc; i++) { // El primer argumento es el nombre del programa
+   for (int i = 1 ; i < argc ; i++) { // El primer argumento es el nombre del programa
        if (strcmp(argv[i], "-d") == 0) {
            dissasambly(mv, cantInstrucciones); // Ejecuta dissasambly
            break;
@@ -136,43 +137,36 @@ int main(int argc, char *argv[]) {
 
    printf("\n");
 
-   while (reg[IP] <= cantInstrucciones){
+   while (reg[IP] <= cantInstrucciones) {
 
-      treg1=treg2=op1=op2=aux1=0;
+      treg1 = treg2 = op1 = op2 = aux1 = 0;
 
   //    printf("[%04X]  ",reg[IP]);
 
-      tOpA = (mv[reg[IP]] >> 6) & 3; // asigna los bits 1100000
-      tOpB = (mv[reg[IP]] >> 4) & 3; //asigna los bits 00110000
+      tOpA = (mv[reg[IP]] >> 6) & 3; // asigna los bits 11000000
+      tOpB = (mv[reg[IP]] >> 4) & 3; // asigna los bits 00110000
 
     //  printf("%02X ",cs[reg[IP]]);
 
       if (tOpB == 3){ // cod operacion uno o sin operandos
 
-         if (tOpA == 3){  // cod operacion 1111 sin operandos
+         if (tOpA == 3) { // cod operacion 1111 sin operandos
             codOp = mv[reg[IP]++];
          }
          else { //cod op xx11 1 operando
             codOp = mv[reg[IP]++] & 63; // &00111111
 
-
-
          }
       }
-      else{ //cod op 2 operandos
+      else { //cod op 2 operandos
             codOp = mv[reg[IP]++] & 15; //&00001111
-
-
       }
-
       //asigno valores a los operandos dependiendo el tama�o
 
       if (tOpA == 0){  // operando apunta a direccion en memoria
-
-
       //   printf("%02X ",cs[reg[IP]]);
 
-      switch (((mv[reg[IP]])>>6)&0xFF) { //si es long(l), word(w) o byte(b)
+      switch (((mv[reg[IP]]) >> 6) & 0xFF) { //si es long(l), word(w) o byte(b)
          
          case 0b00:
             sizeA=4;
@@ -185,8 +179,8 @@ int main(int argc, char *argv[]) {
             break;
          }
          
-         auxA = ((tdds[((reg[(mv[reg[IP]])&0x000000FF])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
-         auxA +=((reg[mv[reg[IP]++]])&0x0000FFFF);
+         auxA  = ((tdds[((reg[(mv[reg[IP]]) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+         auxA += ((reg[mv[reg[IP]++]]) & 0x0000FFFF);
 
          posMemA = mv[reg[IP]++];
          posMemA <<= 8;
@@ -342,8 +336,7 @@ int main(int argc, char *argv[]) {
 
    //  printf("\t | \t");
 
-   if(funciones[codOp] == NULL)
-   {
+   if (funciones[codOp] == NULL) {
       printf("Error: Codigo de operacion invalido\n");
       exit(1);
    }
@@ -359,7 +352,7 @@ int main(int argc, char *argv[]) {
             //Low register, AL
             case 0b01:
                reg[aux1] &= 0xFFFFFF00;
-               op1&=0x000000FF;
+               op1 &= 0x000000FF;
                reg[aux1] |= op1;
             break;
             //High register, AH
@@ -383,7 +376,7 @@ int main(int argc, char *argv[]) {
 
          for (int j = sizeA-1; j >= 0 ; j--){ //recorta y almacena las celdas de memoria en op2
             mv[posMemA + j] = ((*pOp1)&0x000000FF);
-            *pOp1>>=8;
+            *pOp1 >>= 8;
          }
 
          
@@ -405,9 +398,6 @@ int main(int argc, char *argv[]) {
          // mv[posMemB + 1] = (0x00FF0000 & *pOp2)>>16;
          // mv[posMemB + 2] = (0x0000FF00 & *pOp2)>>8;
          // mv[posMemB + 3] = (0x000000FF & *pOp2);
-
-
-
 
       }
       else
@@ -483,10 +473,10 @@ void inicializaFunciones(void (*funciones[cantFunciones])(tppar,tppar)){
 }
 
 void dissasambly(unsigned char cs[],int cantidadInstrucciones){
+
    char funciones[256][5];
    char registros[16][4];
-   tpar op1,op2;
-
+   tpar op1, op2;
 
    strcpy(funciones[0],"MOV");
    strcpy(funciones[1],"ADD");
@@ -535,45 +525,36 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
    strcpy(registros[14],"EEX");
    strcpy(registros[15],"EFX");
 
-
-
-
-
-   unsigned char codOp, tOpA,tOpB; //codigo de operacion, tipo op1, tipo op2
-   int i=0;
-   char quereg1,quereg2; ///AAAAAAAAAAA
+   unsigned char codOp, tOpA, tOpB; //codigo de operacion, tipo op1, tipo op2
+   int i = 0;
+   char quereg1, quereg2; 
 
    while ( i < cantidadInstrucciones){
 
    printf("[%04X]  ", i);
 
-      tOpA=(cs[i]>>6)&3; // asigna los bits 1100000
-      tOpB=(cs[i]>>4)&3; //asigna los bits 00110000
+      tOpA = (cs[i] >> 6) & 3; // asigna los bits 11000000
+      tOpB = (cs[i] >> 4) & 3; // asigna los bits 00110000
 
       printf("%02X ",cs[i]);
 
-      if (tOpB ==3){ // cod operacion uno o sin operandos
+      if (tOpB == 3) { // cod operacion uno o sin operandos
 
-         if (tOpA ==3){  // co d operacion 1111 sin operandos
+         if (tOpA == 3) {  // cod operacion 1111 sin operandos
          printf ("\t");
-            codOp=cs[i++];
+            codOp = cs[i++];
          }
          else { //cod op xx11 1 operando
-            codOp=((cs[i++])&63);
+            codOp = ((cs[i++]) & 63);
             // &00111111
-
-
-
          }
       }
-      else{ //cod op 2 operandos
-            codOp=((cs[i++])&15);
+      else { //cod op 2 operandos
+            codOp = ((cs[i++])&15);
              //&00001111
-
-
       }
 
-      if (tOpA == 0){  // operando apunta a direccion en memoria
+      if (tOpA == 0) { // operando apunta a direccion en memoria
          printf("%02X ",cs[i]);
          op1 = cs[i++];
          op1 = op1 <<  8;
@@ -591,8 +572,8 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
          op1 = cs[i++];
          op1 = op1 <<  8;
          printf("%02X ",cs[i]);
-         op1 = op1 | cs[i++];
-         op1<<=16; op1>>=16;
+         op1  = op1 | cs[i++];
+         op1<<=16; op1 >>= 16;
 
          //pOp1=&op1;
       }
@@ -647,15 +628,15 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
          printf("\t\t |\t");
       printf ("%s \t\t",strlwr(funciones[codOp]));
 
-      if (tOpA==0){
+      if (tOpA==0) {
 
-         if ((op1>>30)&0b11 == 0b01){
+         if ((op1>>30)&0b11 == 0b01) {
             printf("Instruccion invalida");
             exit(-20);   
          }
 
          char size;
-         switch ((op1>>30)&0b11){ // los dos primero bits indican long(l), word(w) o byte(b)
+         switch ((op1 >> 30) & 0b11) { // los dos primero bits indican long(l), word(w) o byte(b)
          case 0b00:
             size = 'l';
             break;
@@ -667,9 +648,9 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
             break;
          }
 
-         if ((op1)&0x00FFFF){
-         printf("%c[%s+%d], ",size,registros[(op1>>16)&0xFF],(op1)&0x00FFFF);
-         if ((op1)&0x00FFFF < 10 || (op1)&0x00FFFF > -10){}; // al pedo?
+         if ((op1) & 0x00FFFF) {
+         printf("%c[%s+%d], ",size,registros[(op1 >> 16) & 0xFF],(op1) & 0x00FFFF);
+         if ((op1) & 0x00FFFF < 10 || (op1) & 0x00FFFF > -10) {}; // al pedo?
          
          }
          else
@@ -946,10 +927,10 @@ void SYS(tppar op1,tppar op2) { ///48
          break;
 
          case 8: // interpreta Hexa
-            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+            for (i = ((tdds[reg[EDX] >> 16] >> 16) + reg[EDX] & 0x0000FFFF) ; i < ((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
                scanf("%x",&aux); //guarda en aux para despues recortar
-               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  mv[i++]=(aux>>k)&0x000000FF;
+               for (int j = 0 ; j < ((reg[ECX] >> 8) & 0xFF) ; j++){ //recorta y almacena
+                  mv[i++] = (aux >> k) & 0x000000FF;
                   k-=8;
                }
             }
@@ -963,17 +944,18 @@ void SYS(tppar op1,tppar op2) { ///48
 
    }
 
-   else if(*op1==2){ 
+   else 
+      if(*op1 == 2){ 
 
-            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
+            for (i = ((tdds[reg[EDX] >> 16] >> 16) + reg[EDX] & 0x0000FFFF) ; i < ((reg[ECX] >> 8) & 0xFF) * (reg[ECX] & 0xFF) + (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
               aux=0;
             printf("[%04X]:",i-(tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);
             if (reg[EAX]&0b10) //si tiene que imprimir caracter
                   printf ("'");
 
-               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
+               for (int j = 0; j < ((reg[ECX] >> 8) & 0xFF) ; j++){ //recorta y almacena
                   
-                  if (reg[EAX]&0b10){ //si tiene que imprimir caracter
+                  if (reg[EAX] & 0b10){ //si tiene que imprimir caracter
                      
                      if (isprint(mv[i]))
                         printf("%c",mv[i]);
@@ -984,20 +966,113 @@ void SYS(tppar op1,tppar op2) { ///48
                   aux=aux<<8;
                   aux=aux|mv[i++]; //guarda en aux para ir armando el int
                }
-            if (reg[EAX]&0b10) //si tiene que imprimir caracter
+            if (reg[EAX] & 0b10) //si tiene que imprimir caracter
                   printf (" ");
-            if (reg[EAX]&0b1) 
+            if (reg[EAX] & 0b1) 
              printf("#%d ",aux);
 
-            if (reg[EAX]&0b100)
+            if (reg[EAX] & 0b100)
              printf("@%o ",aux);
 
-            if (reg[EAX]&0b1000)
+            if (reg[EAX] & 0b1000)
              printf("%%%X",aux);
             
             printf("\n");
             }
-   }
+      }
+      else 
+         if(*op1 == 3) { //STRING READ
+
+            int  longitudd, i, j;
+            char palabra[50]; // DEFINICION INICIAL!¡
+            scanf("%s",palabra);
+            longitudd = reg[ECX] & 0x0000FFFF;
+
+            i = (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);
+            j = 0;
+
+            if (longitudd == -1) { //cantidad ilimitada de caracteres
+              
+               while (j <= strlen(palabra)) {
+                  mv[i] = palabra[j];
+                  i++;
+                  j++;
+               }
+            } 
+            else { //cantidad limitada de caracteres
+               while (j <= longitudd) {
+                  mv[i] = palabra[j];
+                  i++;
+                  j++;
+               }
+            }
+            mv[i] = 0x00;  
+
+         }
+         else 
+            if (*op1 == 4) { //STRING WRITE
+
+               int longitudd, i, j;
+               longitudd = reg[ECX] & 0x0000FFFF;
+               i = (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);
+               j = 0;
+
+               if (longitudd == -1) { //imprimo hasta encontrar 0x00
+                  while (mv[i] != 0x00) {
+                     printf(" %c",mv[i]);
+                     i++;
+                  }
+               }
+               else {
+                  while (j < longitudd && mv[i] != 0x00) { //cantidad limitada de caracteres
+                     printf(" %c",mv[i]);
+                     i++;
+                     j++;
+                  }
+               }
+         
+            }
+            else
+               if (*op1 == 7) //CLEAR SCREEN
+                  system("cls"); 
+               else
+                  if (*op1 == 15) { //BREAKPOINT
+                     
+                     FILE *arch = fopen("Archivo_imagen.vmi","wb");
+                     unsigned char byte;
+                     char          identificador[6]; //6 por el caracter nulo, hace falta??
+
+                     strcpy(identificador,"VMI23");
+                     fwrite(identificador, sizeof(identificador), 1, arch); //VA 1????
+                     byte = 1;
+                     fwrite(&byte, sizeof(byte), 1, arch);
+                     //fwrite de tamaño memoria principal (en 2 bytes)
+
+                     for (int i = 0 ; i++ ; i < cantRegistros) 
+                        fwrite(reg[i], sizeof(int), 1, arch); //VA 1????
+
+                     for (int j = 0 ; j++ ; j < TDDS_SIZE)
+                        fwrite(tdds[j], sizeof(int), 1, arch); //VA 1????
+
+                     //fwrite de tamaño memoria principal (variable)
+
+                     printf("Breakpoint alcanzado. Se generó el archivo de imagen.\n");
+
+                     // Esperar acciones del usuario
+                     char respuesta;
+                     printf("Presione 'q' para continuar o Enter para ejecutar la siguiente instrucción: \n");
+                     scanf(" %c", &respuesta);
+
+                     // Evaluar la acción del usuario
+                     if (respuesta == 'q') {
+                        mv[reg[IP++]];
+                     } 
+                     else { // ingreso Enter
+                        mv[reg[IP++]];
+                     }
+
+                  }  
+
 
    else {
       printf("\nError! Parametro invalido en funcion SYS\n");
@@ -1086,28 +1161,28 @@ void NOT(tppar op1,tppar op2) { //59
 }
 void PUSH(tppar op1,tppar op2){
 
-   reg[SP]-=4;
-   if (reg[SP]<reg[SS]){
+   reg[SP] -= 4;
+   if (reg[SP] < reg[SS]) {
       printf("Error: Stack Overflow");
       exit(-1000);     
    }
 
-   int cualTdds=(reg[SP]>>16)&0x0000FFFF; // para claridad
-   int posMem=tdds[cualTdds]+reg[SP]&0x0000FFFF; //direccion de memoria del tope de la pila (-4 porque reste arriba)
+   int cualTdds = (reg[SP] >> 16) & 0x0000FFFF; // para claridad
+   int posMem = tdds[cualTdds] + reg[SP] & 0x0000FFFF; //direccion de memoria del tope de la pila (-4 porque reste arriba)
 
-   for (int i = 0; i< 4; i++){
-      mv[posMem + i] = (*op1)>>(24-i*8);
+   for (int i = 0; i< 4 ; i++) {
+      mv[posMem + i] = (*op1)>> (24-i*8);
    }
 }
-
+                                             
 void POP(tppar op1,tppar op2){
       
-   if (reg[SP] >= (reg[SS] + ((tdds[(reg[SS])>>16])&0x0000FFFF))){ // si la pila esta vacia
+   if (reg[SP] >= (reg[SS] + ((tdds[(reg[SS]) >> 16]) & 0x0000FFFF))){ // si la pila esta vacia
       printf("Error: Stack Underflow");
       exit(-999);     
    }
 
-   int cualTdds=(reg[SP]>>16)&0x0000FFFF; // para claridad
+   int cualTdds =(reg[SP]>>16)&0x0000FFFF; // para claridad
    int posMem=tdds[cualTdds]+reg[SP]&0x0000FFFF; // direccion de memoria del tope de la pila
 
    for (int i = 0; i< 4; i++){
@@ -1119,6 +1194,14 @@ void POP(tppar op1,tppar op2){
 }
 
 void CALL(tppar op1,tppar op2){
+
+   /* int nuevoIP;
+   nuevoIP  = 0x00001111;
+   reg[IP] &= 0x11110000;
+   nuevoIP |= reg[IP];*/
+   
+   PUSH(reg[IP],0);
+   JMP(op1,0);
 }
 void STOP(tppar op1,tppar op2){
    //printf("%s ",__func__);
@@ -1128,19 +1211,17 @@ void STOP(tppar op1,tppar op2){
 
 }
 void RET(tppar op1,tppar op2){
+   POP(&reg[IP],0);   
 }
 void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m, char* version){
 
-
-
-
-    FILE* arch= fopen(nombre_archivo,"rb");
-    if (arch==NULL){
+    FILE* arch = fopen(nombre_archivo,"rb");
+    if (arch == NULL){
       printf("no se pudo abrir el archivo %s",nombre_archivo);
       exit(-4);
     }
     short espacioCode;
-
+    
     int i = 0;
     unsigned char byte;
 
@@ -1177,7 +1258,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
     tdds[1]  |= (DS_SIZE - espacioCode); //tamano del data segment
   //  printf("data segment: %X \n\n",tdds[1]);
 
-   if (espacioCode>m){
+   if (espacioCode > m) {
       printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
       exit(-404);
       }
@@ -1187,7 +1268,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
             printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
             exit(-404);
          }
-         mv[i++]=byte;
+         mv[i++] = byte;
 
        // printf("%x ",CS[i++]);
    }
@@ -1203,21 +1284,21 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
       short memoriaOffset=0; 
 
-      for (char k=0; k<5; k++){ //inicializa los tdds
+      for (char k = 0; k<5; k++){ //inicializa los tdds
          fread(&byte,sizeof(char),1,arch);
-         espacioCode=byte;
+         espacioCode = byte;
          espacioCode<<=8;
          fread(&byte,sizeof(char),1,arch);
-         espacioCode|=byte;
+         espacioCode |= byte;
 
-         tdds[k]  = memoriaOffset; 
+         tdds[k]   = memoriaOffset; 
          tdds[k] <<= 16;
          
          
          tdds[k] |= espacioCode;
         
 
-         memoriaOffset+=espacioCode;
+         memoriaOffset += espacioCode;
    }
 
       if (espacioCode>m){
