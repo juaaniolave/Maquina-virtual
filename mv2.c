@@ -1051,7 +1051,7 @@ void SYS(tppar op1,tppar op2) { ///48
                   system("cls"); 
                else
                   if (*op1 == 15) { //BREAKPOINT
-                     if (debugger!=NULL){
+                     if (strcmp(debugger,\0)){
                         short tamanoMemoria = sizeof(*mv); // si no anda, se puede obtener el tamañno recorriendo el tdds
                         
                         FILE *arch = fopen(debugger,"wb");
@@ -1436,6 +1436,6 @@ void inicializaRegistros(int tamano_mv, char version){
       reg[SS]=-1;  
    }
 
-      reg[SP]=reg[SS] + tdds[reg[SS]>>16] & 0x0000FFFF; //inicio del StackSegment + offset (el puntero va al final del segmento )
+      reg[SP]=reg[SS] + (tdds[reg[SS]>>16] & 0x0000FFFF); //inicio del StackSegment + offset (el puntero va al final del segmento )
       reg[BP]=reg[SP];
 }
