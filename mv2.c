@@ -64,7 +64,7 @@ void POP(tppar,tppar);
 void CALL(tppar,tppar);
 void STOP(tppar,tppar);
 void RET(tppar,tppar);
-void addres(reg[]);
+tpar address(tpar);
 
 unsigned char mv[MV_SIZE];
 //unsigned char* mv;
@@ -1077,13 +1077,13 @@ void SYS(tppar op1,tppar op2) { ///48
                            byte=(tamanoMemoria)&0x0000FFFF;
                            fwrite(&byte,sizeof(char), 1, arch);
 
-                        for (int i = 0 ; i < cantRegistros ;i++){ 
+                        for (int i = 0 ; i < cantRegistros ;i++) { 
                            for (int j=0; j<4; j++){
                               byte=(reg[i]>>24-j*8)&0x0000FFFF;
                               fwrite(&byte, sizeof(char), 1, arch); 
                            }
                         }
-                        for (int i = 0 ; tdds[i]!=0; i++ ){
+                        for (int i = 0 ; tdds[i]!=0; i++ ) {
                            for (int j=0; j<4 ;j++)
                               fwrite(tdds+j, sizeof(char), 1, arch); 
                         }
@@ -1197,7 +1197,7 @@ void PUSH(tppar op1,tppar op2){
 
    reg[SP] -= 4;
    if (reg[SP] < reg[SS]) {
-      printf("Error: Stack Overflow");
+      printf("Error: Stack Overflow %x",reg[IP]);
       exit(-1000);     
    }
 
@@ -1247,8 +1247,8 @@ void STOP(tppar op1,tppar op2){
 void RET(tppar op1,tppar op2){
    POP(&reg[IP],0);   
 }
-void addres(int reg[IP]) {
-   reg[IP] = ((tdds[((reg[(mv[reg[IP]]) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF;
+tpar address(tpar num) {
+   return ((tdds[((reg[(mv[num]) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF;
 }
 void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m, char* version){
 
@@ -1436,6 +1436,6 @@ void inicializaRegistros(int tamano_mv, char version){
       reg[SS]=-1;  
    }
 
-      reg[SP]=reg[SS] + tdds[reg[SS]>>16]&0xFFFF; //inicio del StackSegment + offset (el puntero va al final del segmento )
+      reg[SP]=reg[SS] + tdds[reg[SS]>>16] & 0x0000FFFF; //inicio del StackSegment + offset (el puntero va al final del segmento )
       reg[BP]=reg[SP];
 }
