@@ -1056,29 +1056,39 @@ void SYS(tppar op1,tppar op2) { ///48
                         
                         FILE *arch = fopen(debugger,"wb");
                            if (arch == NULL) {
-                           printf("Error al abrir el archivo.\n");
+                           printf("Error al crear el archivo.\n");
                               exit (-409);
                            }
+                           char byte;
+                           byte='v';
+                           fwrite(&byte, sizeof(char), 1, arch);
+                           byte='m';
+                           fwrite(&byte, sizeof(char), 1, arch);
+                           byte='i';
+                           fwrite(&byte, sizeof(char), 1, arch);
+                           byte='2';
+                           fwrite(&byte, sizeof(char), 1, arch);
+                           byte='3';
+                           fwrite(&byte, sizeof(char), 1, arch);
+                           byte='2';
+                           fwrite(&byte, sizeof(char), 1, arch);
+                           byte=(tamanoMemoria>>16)&0x0000FFFF;
+                           fwrite(&byte,sizeof(char), 1, arch);
+                           byte=(tamanoMemoria)&0x0000FFFF;
+                           fwrite(&byte,sizeof(char), 1, arch);
 
-                           fwrite('v', sizeof(char), 1, arch);
-                           fwrite('m', sizeof(char), 1, arch);
-                           fwrite('i', sizeof(char), 1, arch);
-                           fwrite('2', sizeof(char), 1, arch);
-                           fwrite('3', sizeof(char), 1, arch);
-                           fwrite(2, sizeof(char), 1, arch);
-                           fwrite((tamanoMemoria>>16)&0x0000FFFF,sizeof(char), 1, arch);
-                           fwrite((tamanoMemoria)&0x0000FFFF,sizeof(char), 1, arch);
-
-                        for (int i = 0 ; i < cantRegistros ;i++) 
-                           for (int j=0; j++; j<4){
-                              fwrite((reg[i]>>24-j*8)&0x0000FFFF, sizeof(char), 1, arch); 
+                        for (int i = 0 ; i < cantRegistros ;i++){ 
+                           for (int j=0; j<4; j++){
+                              byte=(reg[i]>>24-j*8)&0x0000FFFF;
+                              fwrite(&byte, sizeof(char), 1, arch); 
                            }
-                        for (int i = 0 ; tdds[i]!=0; i++ )
-                           for (int j=0; j++; j<4)
-                              fwrite(tdds[j], sizeof(char), 1, arch); 
-                        
+                        }
+                        for (int i = 0 ; tdds[i]!=0; i++ ){
+                           for (int j=0; j<4 ;j++)
+                              fwrite(tdds+j, sizeof(char), 1, arch); 
+                        }
                         for (int i = 0 ; i<tamanoMemoria; i++ )
-                              fwrite(mv[i], sizeof(char), 1, arch); 
+                              fwrite(mv+i, sizeof(char), 1, arch); 
 
                         printf("Breakpoint alcanzado. Se generó el archivo de imagen.\n");
 
@@ -1094,9 +1104,9 @@ void SYS(tppar op1,tppar op2) { ///48
                         else { // ingreso Enter
                            breakpoint=1;
                         }
-
+                     fclose(arch);
                      }  
-
+                  
                   }
    else {
       printf("\nError! Parametro invalido en funcion SYS\n");
