@@ -64,10 +64,10 @@ void POP(tppar,tppar);
 void CALL(tppar,tppar);
 void STOP(tppar,tppar);
 void RET(tppar,tppar);
+void addres(reg[]);
 
-
-//unsigned char mv[MV];
-unsigned char* mv;
+unsigned char mv[MV_SIZE];
+//unsigned char* mv;
 char debugger[30]="\0";
 char breakpoint=0;
 
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 
    char* extension = ".vmx";
    char* extension2= ".vmi";
-   char *nombre_archivo=NULL;
+   char *nombre_archivo="1iterativo.vmx";
    char version=0;
    int cantInstrucciones=0;
 
@@ -117,8 +117,8 @@ int main(int argc, char *argv[]) {
        }
    }
    //ASIGNO TAMAÑO AL MV
-   mv = (char*)malloc(sizeof(char)*m);
-   memset(mv, 0, m); //inicializa en 0 todo mv
+   //mv = (char*)malloc(sizeof(char)*m);
+   //memset(mv, 0, m); //inicializa en 0 todo mv
    
 
    leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m,&version); // lee el archivo binario y carga las instrucciones en el codesegment
@@ -143,8 +143,8 @@ int main(int argc, char *argv[]) {
    tpar op1,op2; //operandos
    tppar pOp1, pOp2; //punteros a los operandos
    char sizeA,sizeB; // cantidad de bytes para operar en memoria
-
-
+   
+   
    printf("\n");
 
    while (reg[IP] <= cantInstrucciones) {
@@ -1202,7 +1202,7 @@ void PUSH(tppar op1,tppar op2){
    }
 
    int cualTdds = (reg[SP] >> 16) & 0x0000FFFF; // para claridad
-   int posMem = tdds[cualTdds] + reg[SP] & 0x0000FFFF; //direccion de memoria del tope de la pila (-4 porque reste arriba)
+   int posMem = tdds[cualTdds] + (reg[SP] & 0x0000FFFF); //direccion de memoria del tope de la pila (-4 porque reste arriba)
 
    for (int i = 0; i< 4 ; i++) {
       mv[posMem + i] = (*op1)>> (24-i*8);
@@ -1246,6 +1246,9 @@ void STOP(tppar op1,tppar op2){
 }
 void RET(tppar op1,tppar op2){
    POP(&reg[IP],0);   
+}
+void addres(int reg[IP]) {
+   reg[IP] = ((tdds[((reg[(mv[reg[IP]]) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF;
 }
 void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m, char* version){
 
