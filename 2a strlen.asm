@@ -9,10 +9,11 @@ main:           push bp
                 add sp,4
                 mov [bp-4],eax
                 mov edx, bp
+                sub edx, 4
                 mov cl,1
                 mov ch,4
                 mov al,15
-                sub edx,bp
+                sys 2              
                 mov sp,bp
                 pop bp
 
