@@ -34,6 +34,7 @@ void inicializaFunciones(void (*funciones[cantFunciones])(tppar,tppar));
 void leeArchivoBinario(unsigned char[], int* ,char*,int, char*);
 void inicializaRegistros(int,char);
 void dissasambly(unsigned char[],int);
+short calculaTamanoMV();
 
 void MOV(tppar,tppar);
 void ADD(tppar,tppar);
@@ -440,7 +441,8 @@ int main(int argc, char *argv[]) {
          }
    }
       if (breakpoint==1){ //sigue ejecutando el breakpoint
-      funciones[48](15,0);
+      int* F = 15;
+      funciones[48](&F,0);
    }
 
 
@@ -759,14 +761,14 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
 
 void MOV(tppar op1,tppar op2){ ///0
-   //printf("%s ",__func__);
+   printf("%s %04X\n ",__func__,reg[IP]);
 
    //no son partes cortas de registros
     *op1=*op2;
 
 }
 void ADD(tppar op1,tppar op2){ ///1
- //printf("%s ",__func__);
+ printf("%s %04X\n ",__func__,reg[IP]);
 
      *op1+=*op2;
 
@@ -778,7 +780,7 @@ void ADD(tppar op1,tppar op2){ ///1
        reg[CC]=0;
  }
 void SUB(tppar op1,tppar op2){ ///2
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
     *op1 -= *op2;
 
@@ -793,7 +795,7 @@ void SUB(tppar op1,tppar op2){ ///2
 
 }
 void SWAP(tppar op1,tppar op2){ ///3
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
     tpar aux;
 
     aux  = *op1;
@@ -801,7 +803,7 @@ void SWAP(tppar op1,tppar op2){ ///3
     *op2 = aux;
 }
 void MUL(tppar op1,tppar op2) { ///4
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    (*op1) *= (*op2);
 
@@ -815,7 +817,7 @@ void MUL(tppar op1,tppar op2) { ///4
    reg[CC]<<=30;
 }
 void DIV(tppar op1,tppar op2) { ///5
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
 
    if (*op2 == 0) {
@@ -840,7 +842,7 @@ void DIV(tppar op1,tppar op2) { ///5
 
 }
 void CMP(tppar op1,tppar op2) { ///6
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
 
 
@@ -857,15 +859,15 @@ void CMP(tppar op1,tppar op2) { ///6
       reg[CC]<<=30;
 }
 void SHL(tppar op1,tppar op2) { ///7
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = *op1 << *op2;
 }
 void SHR(tppar op1,tppar op2) { ///8
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = *op1 >> *op2;
 }
 void AND(tppar op1,tppar op2) { ///9
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = (*op1) & (*op2);
 
    if (*op1==0)
@@ -877,7 +879,7 @@ void AND(tppar op1,tppar op2) { ///9
       reg[CC]<<=30;
 }
 void OR(tppar op1,tppar op2) { ///10 o A
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
     *op1 = (*op1) | (*op2);
 
    if (*op1==0)
@@ -889,7 +891,7 @@ void OR(tppar op1,tppar op2) { ///10 o A
       reg[CC]<<=30;
 }
 void XOR(tppar op1,tppar op2) { ///11 o B
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
     *op1 = (*op1) ^ (*op2);
 
 
@@ -902,7 +904,7 @@ void XOR(tppar op1,tppar op2) { ///11 o B
       reg[CC]<<=30;
 }
 void SYS(tppar op1,tppar op2) { ///48 
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
  int i;
  unsigned int aux,k;
 
@@ -1051,8 +1053,8 @@ void SYS(tppar op1,tppar op2) { ///48
                   system("cls"); 
                else
                   if (*op1 == 15) { //BREAKPOINT
-                     if (strcmp(debugger,\0)){
-                        short tamanoMemoria = sizeof(*mv); // si no anda, se puede obtener el tamañno recorriendo el tdds
+                     if (strcmp(debugger,"\0")){
+                        short tamanoMemoria = calculaTamanoMV(); // calcula el tamaño de la mv apartir del tdds
                         
                         FILE *arch = fopen(debugger,"wb");
                            if (arch == NULL) {
@@ -1070,11 +1072,11 @@ void SYS(tppar op1,tppar op2) { ///48
                            fwrite(&byte, sizeof(char), 1, arch);
                            byte='3';
                            fwrite(&byte, sizeof(char), 1, arch);
-                           byte='2';
+                           byte=2;
                            fwrite(&byte, sizeof(char), 1, arch);
-                           byte=(tamanoMemoria>>16)&0x0000FFFF;
+                           byte=(tamanoMemoria>>8)&0x000000FF;
                            fwrite(&byte,sizeof(char), 1, arch);
-                           byte=(tamanoMemoria)&0x0000FFFF;
+                           byte=(tamanoMemoria)&0x000000FF;
                            fwrite(&byte,sizeof(char), 1, arch);
 
                         for (int i = 0 ; i < cantRegistros ;i++) { 
@@ -1090,21 +1092,28 @@ void SYS(tppar op1,tppar op2) { ///48
                         for (int i = 0 ; i<tamanoMemoria; i++ )
                               fwrite(mv+i, sizeof(char), 1, arch); 
 
+                        fclose(arch);
                         printf("Breakpoint alcanzado. Se generó el archivo de imagen.\n");
 
                         // Esperar acciones del usuario
-                        char respuesta;
+                        char respuesta[256];
+                        
                         printf("Presione 'q' para continuar o Enter para ejecutar la siguiente instrucción: \n");
-                        scanf(" %c", &respuesta);
-
-                        // Evaluar la acción del usuario
-                        if (respuesta == 'q') {
-                           breakpoint=0;
-                        } 
-                        else { // ingreso Enter
-                           breakpoint=1;
+                        
+                        fgets(respuesta,256,stdin);
+                        while (strcmp(respuesta,"q\n") && strcmp(respuesta,"\n")){
+                           
+                           fgets(respuesta,256,stdin);
                         }
-                     fclose(arch);
+
+                           // Evaluar la acción del usuario
+                           if (!strcmp(respuesta,"q")) {
+                              breakpoint=0;
+                           } 
+                           else if(!strcmp(respuesta,"\n")) { // ingreso Enter
+                              breakpoint=1;
+                           }
+                        
                      }  
                   
                   }
@@ -1115,48 +1124,48 @@ void SYS(tppar op1,tppar op2) { ///48
 
 }
 void JMP(tppar op1,tppar op2) { ///49
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    reg[IP]=*op1;
 }
 void JZ(tppar op1,tppar op2) { ///50
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)== 1)
       reg[IP]=*op1;
 }
 void JP(tppar op1,tppar op2) { ///51
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)==0)
       reg[IP]=*op1;
 }
 void JN(tppar op1,tppar op2) { ///52
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)==2)
       reg[IP]=*op1;
 }
 void JNZ(tppar op1,tppar op2) { ///53
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=1)
       reg[IP]=*op1;
 }
 void JNP(tppar op1,tppar op2) { ///54
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=0)
       reg[IP]=*op1;
 }
 void JNN(tppar op1,tppar op2) { ///55
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=2)
       reg[IP]=*op1;
 }
 void LDL(tppar op1,tppar op2) { //56
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -1165,7 +1174,7 @@ void LDL(tppar op1,tppar op2) { //56
 
 }
 void LDH(tppar op1,tppar op2) { //57
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -1175,12 +1184,12 @@ void LDH(tppar op1,tppar op2) { //57
 
 }
 void RND(tppar op1,tppar op2) { //58
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
 reg[AC]=rand() % (*op1 + 1);
 }
 void NOT(tppar op1,tppar op2) { //59
-//printf("%s ",__func__);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    *op1= ~*op1;
 
@@ -1194,6 +1203,7 @@ void NOT(tppar op1,tppar op2) { //59
 
 }
 void PUSH(tppar op1,tppar op2){
+   printf("%s %04X\n ",__func__,reg[IP]);
 
    reg[SP] -= 4;
    if (reg[SP] < reg[SS]) {
@@ -1201,55 +1211,72 @@ void PUSH(tppar op1,tppar op2){
       exit(-1000);     
    }
 
-   int cualTdds = (reg[SP] >> 16) & 0x0000FFFF; // para claridad
-   int posMem = tdds[cualTdds] + (reg[SP] & 0x0000FFFF); //direccion de memoria del tope de la pila (-4 porque reste arriba)
-
    for (int i = 0; i< 4 ; i++) {
-      mv[posMem + i] = (*op1)>> (24-i*8);
+      mv[address(reg[SP]) + i] = (*op1)>> (24-i*8);
    }
 }
                                              
 void POP(tppar op1,tppar op2){
+   printf("%s %04X\n ",__func__,reg[IP]);
       
    if (reg[SP] >= (reg[SS] + ((tdds[(reg[SS]) >> 16]) & 0x0000FFFF))){ // si la pila esta vacia
       printf("Error: Stack Underflow");
       exit(-999);     
    }
 
-   int cualTdds =(reg[SP]>>16)&0x0000FFFF; // para claridad
-   int posMem=tdds[cualTdds]+reg[SP]&0x0000FFFF; // direccion de memoria del tope de la pila
 
    for (int i = 0; i< 4; i++){
       (*op1)<<=8;
-      (*op1) |= mv[posMem + i];
+      (*op1) |= mv[address(reg[SP]) + i];
       
    }
    reg[SP]+=4;
 }
 
 void CALL(tppar op1,tppar op2){
+   printf("%s %04X\n ",__func__,reg[IP]);
 
    /* int nuevoIP;
    nuevoIP  = 0x00001111;
    reg[IP] &= 0x11110000;
    nuevoIP |= reg[IP];*/
    
-   PUSH(reg[IP],0);
+   PUSH(reg+IP,0); //reg+IP porque se manda puntero 
    JMP(op1,0);
 }
 void STOP(tppar op1,tppar op2){
-   //printf("%s ",__func__);
+   printf("%s %04X\n ",__func__,reg[IP]);
 
    exit(1); 
 
 
 }
 void RET(tppar op1,tppar op2){
+   printf("%s %04X\n ",__func__,reg[IP]);
    POP(&reg[IP],0);   
 }
+
 tpar address(tpar num) {
-   return ((tdds[((reg[(mv[num]) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF;
+
+   //recibe puntero a memoria y devuelve la direccion
+   //ejemplo recibe 0x00010020 -> busca ttds 0x0001 -> agarra la direccion del segmento y le suma el offset 0020
+   tpar cualtdds= (num>>16)&0x0000FFFF;
+   tpar posmem = ((tdds[cualtdds]>>16)&0x0000FFFF) + (num&0x0000FFFF);
+   return posmem;
 }
+
+short calculaTamanoMV(){
+
+   char i=0;
+   short tamano=0;
+   while (tdds[i]!=0){
+      tamano+=(tdds[i++]&0x0000FFFF);
+   }
+   
+ return tamano;
+}
+
+
 void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m, char* version){
 
     FILE* arch = fopen(nombre_archivo,"rb");
@@ -1376,19 +1403,20 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
 void inicializaRegistros(int tamano_mv, char version){
 
-   if (version==1){
+  if (version==1){
       reg[CS]=0x00000000;
       reg[DS]=0x00010000;
 
-   }
+ }
 
 
-   else if (version == 2){
+   if (version == 2 ){
       reg[CS]=0x00000000;
       reg[KS]=0x00010000;
       reg[DS]=0x00020000;    
       reg[ES]=0x00030000;  
       reg[SS]=0x00040000;
+      tdds[5]=0;
 
    if (tdds[0]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
       reg[CS]=-1;
@@ -1401,7 +1429,7 @@ void inicializaRegistros(int tamano_mv, char version){
       tdds[1]=tdds[2];
       tdds[2]=tdds[3];
       tdds[3]=tdds[4];
-      tdds[4]=0;
+      tdds[4]=tdds[5];
    }
 
    if (tdds[1]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
@@ -1413,7 +1441,7 @@ void inicializaRegistros(int tamano_mv, char version){
       tdds[1]=tdds[2];
       tdds[2]=tdds[3];
       tdds[3]=tdds[4];
-      tdds[4]=0;
+      tdds[4]=tdds[5];
    }
    if (tdds[2]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
       reg[DS]=-1;
@@ -1422,14 +1450,14 @@ void inicializaRegistros(int tamano_mv, char version){
 
       tdds[2]=tdds[3];
       tdds[3]=tdds[4];
-      tdds[4]=0;
+      tdds[4]=tdds[5];
    }
    if (tdds[3]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
       reg[ES]=-1;
       reg[SS]-=0x00010000;
 
       tdds[3]=tdds[4];
-      tdds[4]=0;
+      tdds[4]=tdds[5];
    }
 
    if (tdds[4]&0xFFFF<=0) //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
