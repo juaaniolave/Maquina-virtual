@@ -154,30 +154,30 @@ int main(int argc, char *argv[]) {
 
   //    printf("[%04X]  ",reg[IP]);
 
-      tOpA = (mv[reg[IP]] >> 6) & 3; // asigna los bits 11000000
-      tOpB = (mv[reg[IP]] >> 4) & 3; // asigna los bits 00110000
+      tOpA = (mv[address(reg[IP])] >> 6) & 3; // asigna los bits 11000000
+      tOpB = (mv[address(reg[IP])] >> 4) & 3; // asigna los bits 00110000
 
     //  printf("%02X ",cs[reg[IP]]);
 
       if (tOpB == 3){ // cod operacion uno o sin operandos
 
          if (tOpA == 3) { // cod operacion 1111 sin operandos
-            codOp = mv[reg[IP]++];
+            codOp = mv[address(reg[IP]++)];
          }
          else { //cod op xx11 1 operando
-            codOp = mv[reg[IP]++] & 63; // &00111111
+            codOp = mv[address(reg[IP]++)] & 63; // &00111111
 
          }
       }
       else { //cod op 2 operandos
-            codOp = mv[reg[IP]++] & 15; //&00001111
+            codOp = mv[address(reg[IP]++)] & 15; //&00001111
       }
       //asigno valores a los operandos dependiendo el tama�o
 
       if (tOpA == 0){  // operando apunta a direccion en memoria
       //   printf("%02X ",cs[reg[IP]]);
 
-      switch (((mv[reg[IP]]) >> 6) & 0xFF) { //si es long(l), word(w) o byte(b)
+      switch (((mv[address(reg[IP])]) >> 6) & 0xFF) { //si es long(l), word(w) o byte(b)
          
          case 0b00:
             sizeA=4;
@@ -190,14 +190,14 @@ int main(int argc, char *argv[]) {
             break;
          }
          
-         auxA  = ((tdds[((reg[(mv[reg[IP]]) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
-         auxA += ((reg[mv[reg[IP]++]]) & 0x0000FFFF);
+         auxA  = ((tdds[((reg[(mv[address(reg[IP])]) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+         auxA += ((reg[mv[address(reg[IP]++)]]) & 0x0000FFFF);
 
-         posMemA = mv[reg[IP]++];
+         posMemA = mv[address(reg[IP]++)];
          posMemA <<= 8;
       //   printf("%02X ",cs[reg[IP]]);
 
-         posMemA |= mv[reg[IP]++];
+         posMemA |= mv[address(reg[IP]++)];
        //  printf("%02X ",cs[reg[IP]]);
 
          posMemA += auxA; // offset += valor del reg, por ej [DS+10]
@@ -214,6 +214,9 @@ int main(int argc, char *argv[]) {
             op1 |= mv[posMemA + j]; // primero es ds[posMem + 0]
          }
 
+         op1<<=32-sizeA*8;
+         op1>>=32-sizeA*8;
+
          //pOp1=&(ds[op1]);
 
          pOp1 =& op1;
@@ -222,10 +225,10 @@ int main(int argc, char *argv[]) {
 
       else if (tOpA == 1){
        //  printf("%02X ",cs[reg[IP]]);
-         op1 = mv[reg[IP]++];
+         op1 = mv[address(reg[IP]++)];
          op1 = op1 <<  8;
      //    printf("%02X ",cs[reg[IP]]);
-         op1 = op1 | mv[reg[IP]++];
+         op1 = op1 | mv[address(reg[IP]++)];
          op1<<=16; op1>>=16;
 
          pOp1 =& op1;
@@ -233,8 +236,8 @@ int main(int argc, char *argv[]) {
       }
       else if (tOpA == 2){
       //   printf("%02X ",cs[reg[IP]]);
-         treg1 = (mv[reg[IP]] >> 4) & 0b0011;
-         op1   = mv[reg[IP]++] & 0b1111;
+         treg1 = (mv[address(reg[IP])] >> 4) & 0b0011;
+         op1   = mv[address(reg[IP]++)] & 0b1111;
 
          aux1 = op1;
 
@@ -265,7 +268,7 @@ int main(int argc, char *argv[]) {
          int auxB;
       //   printf("%02X ",cs[reg[IP]]);
 
-      switch (((mv[reg[IP]])>>6)&0xFF) { //si es long(l), word(w) o byte(b)
+      switch (((mv[address(reg[IP])])>>6)&0xFF) { //si es long(l), word(w) o byte(b)
          
          case 0b00:
             sizeB=4;
@@ -278,14 +281,14 @@ int main(int argc, char *argv[]) {
             break;
          }
          
-         auxB = ((tdds[((reg[(mv[reg[IP]])&0x000000FF])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
-         auxB +=((reg[mv[reg[IP]++]])&0x0000FFFF);
+         auxB = ((tdds[((reg[(mv[address(reg[IP])])&0x000000FF])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+         auxB +=((reg[mv[address(reg[IP]++)]])&0x0000FFFF);
 
-         posMemB = mv[reg[IP]++];
+         posMemB = mv[address(reg[IP]++)];
          posMemB <<= 8;
        //  printf("%02X ",cs[reg[IP]]);
 
-         posMemB |= mv[reg[IP]++];
+         posMemB |= mv[address(reg[IP]++)];
        //  printf("%02X ",cs[reg[IP]]);
 
          posMemB += auxB; // offset += valor del reg, por ej [DS+10]
@@ -302,16 +305,19 @@ int main(int argc, char *argv[]) {
             op2 |= mv[posMemB + j]; // primero es ds[posMem + 0]
          }
 
+         op2<<=32-sizeB*8;
+         op2>>=32-sizeB*8;
+
          //pOp1=&(ds[op1]);
 
          pOp2 =& op2;
       }
       else if (tOpB == 1){
        //  printf("%02X ",cs[reg[IP]]);
-         op2 = mv[reg[IP]++];
+         op2 = mv[address(reg[IP]++)];
          op2 = op2 <<  8;
       //   printf("%02X ",cs[reg[IP]]);
-         op2 = op2 | mv[reg[IP]++];
+         op2 = op2 | mv[address(reg[IP]++)];
          op2<<=16; op2>>=16;
 
 
@@ -320,8 +326,8 @@ int main(int argc, char *argv[]) {
       else
          if (tOpB == 2){
             //printf("%02X ",cs[reg[IP]]);
-            treg2 = (mv[reg[IP]] >> 4) & 0b0011;
-            op2   = mv[reg[IP]++] & 0b1111;
+            treg2 = (mv[address(reg[IP])] >> 4) & 0b0011;
+            op2   = mv[address(reg[IP]++)] & 0b1111;
             aux2 = op2;
 
                switch (treg2) {
@@ -636,7 +642,7 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
         // pOp2=&(reg[op2]);
 
       }
-      if (codOp== 60 || codOp ==61)
+      if ((codOp== 60 || codOp ==61) && tOpA == 2)
       printf("\t");
       if (tOpA+tOpB < 2)
          printf("\t | \t");
@@ -665,7 +671,10 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
          }
 
          if ((op1) & 0x00FFFF) {
-         printf("%c[%s+%d], ",size,registros[(op1 >> 16) & 0xFF],(op1) & 0x00FFFF);
+            if ((op1)<<16>>16 < 0)
+               printf("%c[%s%d], ",size,registros[(op1 >> 16) & 0xFF],(op1)<<16>>16); //si es negativo, usa signo menos
+            else
+               printf("%c[%s+%d], ",size,registros[(op1 >> 16) & 0xFF],(op1)&0x0000FFFF);
          if ((op1) & 0x00FFFF < 10 || (op1) & 0x00FFFF > -10) {}; // al pedo?
          
          }
@@ -717,10 +726,14 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
                size = 'b';
                break;
             };
-            if ((op2)&0x00FFFF)
-         printf("%c[%s+%d],\t",size,registros[(op2>>16)&0xFF],(op2)&0x00FFFF);
+            if ((op2)&0x00FFFF){
+               if ((op2)<<16>>16 < 0)
+                  printf("%c[%s%d], ",size,registros[(op2 >> 16) & 0xFF],(op2)<<16>>16); //si es negativo, usa signo menos
+               else
+                  printf("%c[%s+%d],\t",size,registros[(op2>>16)&0xFF],(op2)&0x00FFFF);
+            }
             else
-         printf("%c[%s],\t",size,registros[(op2>>16)&0xFF]);
+               printf("%c[%s],\t",size,registros[(op2>>16)&0xFF]);
          }
 
       else if (tOpB==1){
@@ -761,14 +774,14 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
 
 void MOV(tppar op1,tppar op2){ ///0
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
 
    //no son partes cortas de registros
     *op1=*op2;
 
 }
 void ADD(tppar op1,tppar op2){ ///1
- printf("%s %04X\n ",__func__,reg[IP]);
+ //printf("%s %04X\n ",__func__,reg[IP]);
 
      *op1+=*op2;
 
@@ -780,7 +793,7 @@ void ADD(tppar op1,tppar op2){ ///1
        reg[CC]=0;
  }
 void SUB(tppar op1,tppar op2){ ///2
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
     *op1 -= *op2;
 
@@ -795,7 +808,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void SWAP(tppar op1,tppar op2){ ///3
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
     tpar aux;
 
     aux  = *op1;
@@ -803,7 +816,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
     *op2 = aux;
 }
 void MUL(tppar op1,tppar op2) { ///4
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    (*op1) *= (*op2);
 
@@ -817,7 +830,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
    reg[CC]<<=30;
 }
 void DIV(tppar op1,tppar op2) { ///5
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
 
    if (*op2 == 0) {
@@ -842,7 +855,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void CMP(tppar op1,tppar op2) { ///6
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
 
 
@@ -859,15 +872,15 @@ printf("%s %04X\n ",__func__,reg[IP]);
       reg[CC]<<=30;
 }
 void SHL(tppar op1,tppar op2) { ///7
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = *op1 << *op2;
 }
 void SHR(tppar op1,tppar op2) { ///8
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = *op1 >> *op2;
 }
 void AND(tppar op1,tppar op2) { ///9
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = (*op1) & (*op2);
 
    if (*op1==0)
@@ -879,7 +892,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
       reg[CC]<<=30;
 }
 void OR(tppar op1,tppar op2) { ///10 o A
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
     *op1 = (*op1) | (*op2);
 
    if (*op1==0)
@@ -891,7 +904,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
       reg[CC]<<=30;
 }
 void XOR(tppar op1,tppar op2) { ///11 o B
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
     *op1 = (*op1) ^ (*op2);
 
 
@@ -904,7 +917,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
       reg[CC]<<=30;
 }
 void SYS(tppar op1,tppar op2) { ///48 
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
  int i;
  unsigned int aux,k;
 
@@ -998,11 +1011,11 @@ printf("%s %04X\n ",__func__,reg[IP]);
       }
       else 
          if(*op1 == 3) { //STRING READ
-
-            int  longitudd, i, j;
+            short longitudd;
+            int  i, j;
             char palabra[50]; // DEFINICION INICIAL!¡
             scanf("%s",palabra);
-            longitudd = reg[ECX] & 0x0000FFFF;
+            longitudd = (reg[ECX] & 0x0000FFFF);
 
             i = (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);
             j = 0;
@@ -1021,8 +1034,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
                   i++;
                   j++;
                }
-            }
-            mv[i] = 0x00;  
+            }  
 
          }
          else 
@@ -1085,9 +1097,11 @@ printf("%s %04X\n ",__func__,reg[IP]);
                               fwrite(&byte, sizeof(char), 1, arch); 
                            }
                         }
-                        for (int i = 0 ; tdds[i]!=0; i++ ) {
-                           for (int j=0; j<4 ;j++)
-                              fwrite(tdds+j, sizeof(char), 1, arch); 
+                        for (int i = 0 ; i < TDDS_SIZE; i++ ) {
+                           for (int j=0; j<4 ;j++){
+                              byte=(tdds[i]>>24-j*8)&0x0000FFFF;
+                              fwrite(&byte, sizeof(char), 1, arch); 
+                           }
                         }
                         for (int i = 0 ; i<tamanoMemoria; i++ )
                               fwrite(mv+i, sizeof(char), 1, arch); 
@@ -1124,48 +1138,48 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void JMP(tppar op1,tppar op2) { ///49
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    reg[IP]=*op1;
 }
 void JZ(tppar op1,tppar op2) { ///50
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)== 1)
       reg[IP]=*op1;
 }
 void JP(tppar op1,tppar op2) { ///51
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)==0)
       reg[IP]=*op1;
 }
 void JN(tppar op1,tppar op2) { ///52
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)==2)
       reg[IP]=*op1;
 }
 void JNZ(tppar op1,tppar op2) { ///53
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=1)
       reg[IP]=*op1;
 }
 void JNP(tppar op1,tppar op2) { ///54
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=0)
       reg[IP]=*op1;
 }
 void JNN(tppar op1,tppar op2) { ///55
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=2)
       reg[IP]=*op1;
 }
 void LDL(tppar op1,tppar op2) { //56
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -1174,7 +1188,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void LDH(tppar op1,tppar op2) { //57
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -1184,12 +1198,12 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void RND(tppar op1,tppar op2) { //58
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
 reg[AC]=rand() % (*op1 + 1);
 }
 void NOT(tppar op1,tppar op2) { //59
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    *op1= ~*op1;
 
@@ -1203,11 +1217,11 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void PUSH(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
 
    reg[SP] -= 4;
    if (reg[SP] < reg[SS]) {
-      printf("Error: Stack Overflow %x",reg[IP]);
+      printf("Error: Stack Overflow en %x",reg[IP]);
       exit(-1000);     
    }
 
@@ -1217,7 +1231,7 @@ void PUSH(tppar op1,tppar op2){
 }
                                              
 void POP(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
       
    if (reg[SP] >= (reg[SS] + ((tdds[(reg[SS]) >> 16]) & 0x0000FFFF))){ // si la pila esta vacia
       printf("Error: Stack Underflow");
@@ -1234,7 +1248,7 @@ void POP(tppar op1,tppar op2){
 }
 
 void CALL(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
 
    /* int nuevoIP;
    nuevoIP  = 0x00001111;
@@ -1245,14 +1259,14 @@ void CALL(tppar op1,tppar op2){
    JMP(op1,0);
 }
 void STOP(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
 
    exit(1); 
 
 
 }
 void RET(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
    POP(&reg[IP],0);   
 }
 
@@ -1364,6 +1378,8 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
          memoriaOffset += espacioCode;
    }
+         tdds[5]=tdds[6]=tdds[7]=((tdds[4]>>16)+(tdds[4]&0x0000FFFF))<<16;
+     
       int espacioTotal=0;
       for (int k = 0;k<CANT_SEGMENTOS;k++){ //chequea espacio total
          espacioTotal+=(tdds[k]&0x0000FFFF);
@@ -1406,64 +1422,68 @@ void inicializaRegistros(int tamano_mv, char version){
   if (version==1){
       reg[CS]=0x00000000;
       reg[DS]=0x00010000;
+   }
 
- }
 
-
-   if (version == 2 ){
+   else if (version == 2 ){
       reg[CS]=0x00000000;
       reg[KS]=0x00010000;
       reg[DS]=0x00020000;    
       reg[ES]=0x00030000;  
       reg[SS]=0x00040000;
-      tdds[5]=0;
 
-   if (tdds[0]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-      reg[CS]=-1;
-      reg[KS]-=0x00010000;
-      reg[DS]-=0x00010000;    
-      reg[ES]-=0x00010000;  
-      reg[SS]-=0x00010000;
 
-      tdds[0]=tdds[1];
-      tdds[1]=tdds[2];
-      tdds[2]=tdds[3];
-      tdds[3]=tdds[4];
-      tdds[4]=tdds[5];
-   }
+      if (tdds[0]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+         reg[CS]=-1;
+         reg[KS]-=0x00010000;
+         reg[DS]-=0x00010000;    
+         reg[ES]-=0x00010000;  
+         reg[SS]-=0x00010000;
 
-   if (tdds[1]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-      reg[KS]=-1;
-      reg[DS]-=0x00010000;    
-      reg[ES]-=0x00010000;  
-      reg[SS]-=0x00010000;
+         tdds[0]=tdds[1];
+         tdds[1]=tdds[2];
+         tdds[2]=tdds[3];
+         tdds[3]=tdds[4];
+         tdds[4]=tdds[5];
+      }
 
-      tdds[1]=tdds[2];
-      tdds[2]=tdds[3];
-      tdds[3]=tdds[4];
-      tdds[4]=tdds[5];
-   }
-   if (tdds[2]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-      reg[DS]=-1;
-      reg[ES]-=0x00010000;  
-      reg[SS]-=0x00010000;
+      if (tdds[1]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+         reg[KS]=-1;
+         reg[DS]-=0x00010000;    
+         reg[ES]-=0x00010000;  
+         reg[SS]-=0x00010000;
 
-      tdds[2]=tdds[3];
-      tdds[3]=tdds[4];
-      tdds[4]=tdds[5];
-   }
-   if (tdds[3]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-      reg[ES]=-1;
-      reg[SS]-=0x00010000;
+         tdds[1]=tdds[2];
+         tdds[2]=tdds[3];
+         tdds[3]=tdds[4];
+         tdds[4]=tdds[5];
+      }
+      if (tdds[2]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+         reg[DS]=-1;
+         reg[ES]-=0x00010000;  
+         reg[SS]-=0x00010000;
 
-      tdds[3]=tdds[4];
-      tdds[4]=tdds[5];
-   }
+         tdds[2]=tdds[3];
+         tdds[3]=tdds[4];
+         tdds[4]=tdds[5];
+      }
+      if (tdds[3]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+         reg[ES]=-1;
+         reg[SS]-=0x00010000;
 
-   if (tdds[4]&0xFFFF<=0) //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-      reg[SS]=-1;  
-   }
+         tdds[3]=tdds[4];
+         tdds[4]=tdds[5];
+      }
 
+      if (tdds[4]&0xFFFF<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
+         tdds[4]=tdds[5];
+         reg[SS]=-1;  
+      }
+      
       reg[SP]=reg[SS] + (tdds[reg[SS]>>16] & 0x0000FFFF); //inicio del StackSegment + offset (el puntero va al final del segmento )
       reg[BP]=reg[SP];
+      
+   }
+
+
 }

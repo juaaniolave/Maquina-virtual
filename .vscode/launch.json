@@ -10,7 +10,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/mv2.exe",
-            "args": ["1iterativo.vmx", "archivo.vmi", "-d","m=3500"],
+            "args": ["2a strlen.vmx", "-d","m=3500"],
             "cwd": "${workspaceFolder}",
             "externalConsole": true
 
