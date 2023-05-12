@@ -10,8 +10,9 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/mv2.exe",
-            "args": ["1iterativo.vmx", "-d","imagen.vmi"],
-            "cwd": "${workspaceFolder}"
+            "args": ["1iterativo.vmx", "archivo.vmi", "-d","m=3500"],
+            "cwd": "${workspaceFolder}",
+            "externalConsole": true
 
           }
         ]

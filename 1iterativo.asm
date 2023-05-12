@@ -5,6 +5,11 @@
         push ecx
         call potencia
         add sp,8
+	mov ch,4
+	mov cl,1
+	mov al 1
+	mov edx,eax
+	sys 2
         stop
 
 potencia:        push bp 
