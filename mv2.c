@@ -447,7 +447,7 @@ int main(int argc, char *argv[]) {
          }
    }
       if (breakpoint==1){ //sigue ejecutando el breakpoint
-      int* F = 15;
+      int F = 15;
       funciones[48](&F,0);
    }
 
@@ -1040,20 +1040,20 @@ void SYS(tppar op1,tppar op2) { ///48
          else 
             if (*op1 == 4) { //STRING WRITE
 
-               int longitudd, i, j;
+               short longitudd, i, j;
                longitudd = reg[ECX] & 0x0000FFFF;
                i = (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);
                j = 0;
 
                if (longitudd == -1) { //imprimo hasta encontrar 0x00
                   while (mv[i] != 0x00) {
-                     printf(" %c",mv[i]);
+                     printf("%c",mv[i]);
                      i++;
                   }
                }
                else {
                   while (j < longitudd && mv[i] != 0x00) { //cantidad limitada de caracteres
-                     printf(" %c",mv[i]);
+                     printf("%c",mv[i]);
                      i++;
                      j++;
                   }

@@ -10,9 +10,9 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/mv2.exe",
-            "args": ["2a strlen.vmx", "-d","m=3500"],
+            "args": ["2astrlen.vmx", "-d","m=3500"],
             "cwd": "${workspaceFolder}",
-            "externalConsole": true
+            //"externalConsole": true
 
           }
         ]
