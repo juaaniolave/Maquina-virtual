@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
       if (tOpA == 0){  // operando apunta a direccion en memoria
       //   printf("%02X ",cs[reg[IP]]);
 
-      switch (((mv[address(reg[IP])]) >> 6) & 0xFF) { //si es long(l), word(w) o byte(b)
+      switch (((mv[address(reg[IP])]) >> 6) & 0b11) { //si es long(l), word(w) o byte(b)
          
          case 0b00:
             sizeA=4;
@@ -268,7 +268,7 @@ int main(int argc, char *argv[]) {
          int auxB;
       //   printf("%02X ",cs[reg[IP]]);
 
-      switch (((mv[address(reg[IP])])>>6)&0xFF) { //si es long(l), word(w) o byte(b)
+      switch (((mv[address(reg[IP])])>>6)&0b11) { //si es long(l), word(w) o byte(b)
          
          case 0b00:
             sizeB=4;
@@ -672,14 +672,14 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
          if ((op1) & 0x00FFFF) {
             if ((op1)<<16>>16 < 0)
-               printf("%c[%s%d], ",size,registros[(op1 >> 16) & 0xFF],(op1)<<16>>16); //si es negativo, usa signo menos
+               printf("%c[%s%d], ",size,registros[(op1 >> 16) & 0b11],(op1)<<16>>16); //si es negativo, usa signo menos
             else
-               printf("%c[%s+%d], ",size,registros[(op1 >> 16) & 0xFF],(op1)&0x0000FFFF);
+               printf("%c[%s+%d], ",size,registros[(op1 >> 16) & 0b11],(op1)&0x0000FFFF);
          if ((op1) & 0x00FFFF < 10 || (op1) & 0x00FFFF > -10) {}; // al pedo?
          
          }
          else
-         printf("%c[%s],\t ",size,registros[(op1>>16)&0xFF]);
+         printf("%c[%s],\t ",size,registros[(op1>>16)&0b11]);
       }
 
       else if (tOpA==1){
@@ -728,12 +728,12 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
             };
             if ((op2)&0x00FFFF){
                if ((op2)<<16>>16 < 0)
-                  printf("%c[%s%d], ",size,registros[(op2 >> 16) & 0xFF],(op2)<<16>>16); //si es negativo, usa signo menos
+                  printf("%c[%s%d], ",size,registros[(op2 >> 16) & 0xb11],(op2)<<16>>16); //si es negativo, usa signo menos
                else
-                  printf("%c[%s+%d],\t",size,registros[(op2>>16)&0xFF],(op2)&0x00FFFF);
+                  printf("%c[%s+%d],\t",size,registros[(op2>>16)&0b11],(op2)&0x00FFFF);
             }
             else
-               printf("%c[%s],\t",size,registros[(op2>>16)&0xFF]);
+               printf("%c[%s],\t",size,registros[(op2>>16)&0b11]);
          }
 
       else if (tOpB==1){
