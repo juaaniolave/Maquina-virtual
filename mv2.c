@@ -189,9 +189,8 @@ int main(int argc, char *argv[]) {
             sizeA=1;
             break;
          }
-         
-         auxA  = ((tdds[((reg[((mv[address(reg[IP])])&0x0F) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
-         auxA += ((reg[mv[address(reg[IP]++)]]) & 0x0000FFFF);
+         auxA  = ((tdds[((reg[(mv[address(reg[IP])])&0x0F]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+         auxA += ((reg[mv[address(reg[IP]++)]&0x0F]) & 0x0000FFFF);
 
          posMemA = mv[address(reg[IP]++)];
          posMemA <<= 8;
@@ -281,7 +280,7 @@ int main(int argc, char *argv[]) {
          }
          
          auxB = ((tdds[((reg[(mv[address(reg[IP])])&0xF])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
-         auxB +=((reg[mv[address(reg[IP]++)]])&0x0000FFFF);
+         auxB +=((reg[mv[address(reg[IP]++)]&0xF])&0x0000FFFF);
 
          posMemB = mv[address(reg[IP]++)];
          posMemB <<= 8;
