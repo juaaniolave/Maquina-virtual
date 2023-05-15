@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
    inicializaRegistros(m,version);
 
    //programa principal
-   unsigned short posMemA, posMemB;
+   short posMemA, posMemB;
    tpar auxA;
    int aux1,aux2;
    char treg1, treg2; //0 si los valores de registros son completos por ej EFX, otro valor si son EL, EC, o EX
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
             break;
          }
          
-         auxA  = ((tdds[((reg[(mv[address(reg[IP])]) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+         auxA  = ((tdds[((reg[((mv[address(reg[IP])])&0x0F) & 0x000000FF]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
          auxA += ((reg[mv[address(reg[IP]++)]]) & 0x0000FFFF);
 
          posMemA = mv[address(reg[IP]++)];
@@ -199,8 +199,7 @@ int main(int argc, char *argv[]) {
 
          posMemA |= mv[address(reg[IP]++)];
        //  printf("%02X ",cs[reg[IP]]);
-
-         posMemA += auxA; // offset += valor del reg, por ej [DS+10]
+          posMemA += auxA; // offset += valor del reg, por ej [DS+10]
 
           if (!((tdds[(posMemA>>16)&0x0000FFFF])>>16)&0x0000FFFF <= posMemA && posMemA < ((tdds[(posMemA>>16)&0x0000FFFF]>>16)&0x0000FFFF+((tdds[(posMemA>>16)&0x0000FFFF] & 0x0000FFFF)) - sizeA) ) { //En la segunda parte puede que sea modificado (el 4)
              printf("Error de segmentacion\n");
@@ -281,7 +280,7 @@ int main(int argc, char *argv[]) {
             break;
          }
          
-         auxB = ((tdds[((reg[(mv[address(reg[IP])])&0x000000FF])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
+         auxB = ((tdds[((reg[(mv[address(reg[IP])])&0xF])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
          auxB +=((reg[mv[address(reg[IP]++)]])&0x0000FFFF);
 
          posMemB = mv[address(reg[IP]++)];
@@ -358,7 +357,7 @@ int main(int argc, char *argv[]) {
       exit(1);
    }
 
-   funciones[codOp](pOp1,pOp2);
+    funciones[codOp](pOp1,pOp2);
 
    if (tOpA == 2) { //mande un registro como tOpA
          switch (treg1)
@@ -672,18 +671,18 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
          if ((op1) & 0x00FFFF) {
             if ((op1)<<16>>16 < 0)
-               printf("%c[%s%d], ",size,registros[(op1 >> 16) & 0b11],(op1)<<16>>16); //si es negativo, usa signo menos
+               printf("%c[%s%d], ",size,registros[(op1 >> 16) & 0xF],(op1)<<16>>16); //si es negativo, usa signo menos
             else
-               printf("%c[%s+%d], ",size,registros[(op1 >> 16) & 0b11],(op1)&0x0000FFFF);
+               printf("%c[%s+%d], ",size,registros[(op1 >> 16) & 0xF],(op1)&0x0000FFFF);
          if ((op1) & 0x00FFFF < 10 || (op1) & 0x00FFFF > -10) {}; // al pedo?
          
          }
          else
-         printf("%c[%s],\t ",size,registros[(op1>>16)&0b11]);
+         printf("%c[%s],\t ",size,registros[(op1>>16)&0xF]);
       }
 
       else if (tOpA==1){
-         if(codOp >=49 && codOp <=55) //es algun jump tiene q mostrar en hexa
+         if((codOp >=49 && codOp <=55) || codOp == 62 ) //es algun jump tiene q mostrar en hexa
             printf("%X\t",op1);
          else if (codOp==48){
             printf("%d\t",op1);// es sys, muestra sin la coma
@@ -728,12 +727,12 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
             };
             if ((op2)&0x00FFFF){
                if ((op2)<<16>>16 < 0)
-                  printf("%c[%s%d], ",size,registros[(op2 >> 16) & 0xb11],(op2)<<16>>16); //si es negativo, usa signo menos
+                  printf("%c[%s%d], ",size,registros[(op2 >> 16) & 0xF],(op2)<<16>>16); //si es negativo, usa signo menos
                else
-                  printf("%c[%s+%d],\t",size,registros[(op2>>16)&0b11],(op2)&0x00FFFF);
+                  printf("%c[%s+%d],\t",size,registros[(op2>>16)&0xFF],(op2)&0x00FFFF);
             }
             else
-               printf("%c[%s],\t",size,registros[(op2>>16)&0b11]);
+               printf("%c[%s],\t",size,registros[(op2>>16)&0xFF]);
          }
 
       else if (tOpB==1){
