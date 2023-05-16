@@ -650,7 +650,7 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
       if (tOpA==0) {
 
-         if ((op1>>30)&0b11 == 0b01) {
+         if ((op1>>22)&0b11 == 0b10) {
             printf("Instruccion invalida");
             exit(-20);   
          }
@@ -707,7 +707,7 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
          printf("\t");
 
          if (tOpB==0){
-            if ((op2>>30)&0b11 == 0b01){
+            if ((op2>>22)&0b11 == 0b10){
                printf("Instruccion invalida");
                exit(-20);   
             }
@@ -1278,16 +1278,15 @@ tpar address(tpar num) {
 }
 
 short calculaTamanoMV(){
-
+   
    char i=0;
    short tamano=0;
-   while (tdds[i]!=0){
+   while (i < TDDS_SIZE){
       tamano+=(tdds[i++]&0x0000FFFF);
    }
    
  return tamano;
 }
-
 
 void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m, char* version){
 
@@ -1366,6 +1365,11 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
          espacioCode<<=8;
          fread(&byte,sizeof(char),1,arch);
          espacioCode |= byte;
+
+         if (espacioCode > MV_SIZE) {
+            printf("\n");
+         }
+
 
          tdds[k]   = memoriaOffset; 
          tdds[k] <<= 16;
@@ -1483,10 +1487,4 @@ void inicializaRegistros(int tamano_mv, char version){
       
    }
    
-      printf("code: %x \n",tdds[0]);
-      printf("constant: %x \n",tdds[1]);
-      printf("data: %x \n",tdds[2]);
-      printf("extra: %x \n",tdds[3]);
-      printf("stack: %x \n",tdds[4]);
-
 }
