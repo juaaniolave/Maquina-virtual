@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 
    char* extension = ".vmx";
    char* extension2= ".vmi";
-   char *nombre_archivo="1iterativo-3pwr5.vmx";
+   char *nombre_archivo=NULL;
    char version=0;
    int cantInstrucciones=0;
 
