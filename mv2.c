@@ -1359,8 +1359,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
       short memoriaOffset=0; 
 
-      for (char k = 0; k<5; k++){ //inicializa los tdds
-         fread(&byte,sizeof(char),1,arch);
+        fread(&byte,sizeof(char),1,arch);
          espacioCode = byte;
          espacioCode<<=8;
          fread(&byte,sizeof(char),1,arch);
@@ -1369,6 +1368,9 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
          if (espacioCode > MV_SIZE) {
             printf("\n");
          }
+
+      for (char k = 0; k<5; k++){ //inicializa los tdds
+
 
 
          tdds[k]   = memoriaOffset; 

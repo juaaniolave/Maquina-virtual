@@ -11,7 +11,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/mv2.exe",
-            "args": ["2eSplit.vmx", "-d","m=3500","archivo.vmi"],
+            "args": ["sample1.vmx", "-d","m=35000","archivo.vmi"],
             "cwd": "${workspaceFolder}",
             "externalConsole": true,
             "stopAtEntry": false,
