@@ -1359,7 +1359,8 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
       short memoriaOffset=0; 
 
-        fread(&byte,sizeof(char),1,arch);
+      for (char k = 0; k<5; k++){ //inicializa los tdds
+         fread(&byte,sizeof(char),1,arch);
          espacioCode = byte;
          espacioCode<<=8;
          fread(&byte,sizeof(char),1,arch);
@@ -1368,9 +1369,6 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
          if (espacioCode > MV_SIZE) {
             printf("\n");
          }
-
-      for (char k = 0; k<5; k++){ //inicializa los tdds
-
 
 
          tdds[k]   = memoriaOffset; 
@@ -1407,7 +1405,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
        // printf("%x ",CS[i++]);
    }
-   if (i>espacioCode){
+   if (i>(tdds[0]&0xFFFF)){
      printf("Error de segmentacion en CS");
      exit(-3);
    }
