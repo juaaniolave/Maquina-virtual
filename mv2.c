@@ -67,8 +67,8 @@ void STOP(tppar,tppar);
 void RET(tppar,tppar);
 tpar address(tpar);
 
-unsigned char mv[MV_SIZE];
-//unsigned char* mv;
+//unsigned char mv[MV_SIZE];
+unsigned char* mv;
 char debugger[30]="\0";
 char breakpoint=0;
 
@@ -118,8 +118,8 @@ int main(int argc, char *argv[]) {
        }
    }
    //ASIGNO TAMAÑO AL MV
-   //mv = (char*)malloc(sizeof(char)*m);
-   //memset(mv, 0, m); //inicializa en 0 todo mv
+   mv = (char*)malloc(sizeof(char)*m);
+   memset(mv, 0, m); //inicializa en 0 todo mv
    
 
    leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m,&version); // lee el archivo binario y carga las instrucciones en el codesegment
@@ -291,7 +291,7 @@ int main(int argc, char *argv[]) {
 
          posMemB += auxB; // offset += valor del reg, por ej [DS+10]
          
-          if (!((tdds[(posMemA>>16)&0x0000FFFF])>>16)&0x0000FFFF <= posMemB && posMemB < ((tdds[(posMemA>>16)&0x0000FFFF]>>16)&0x0000FFFF+((tdds[(posMemA>>16)&0x0000FFFF] & 0x0000FFFF)) - sizeB) ) { //En la segunda parte puede que sea modificado (el 4)
+          if (!((tdds[(posMemB>>16)&0x0000FFFF])>>16)&0x0000FFFF <= posMemB && posMemB < ((tdds[(posMemB>>16)&0x0000FFFF]>>16)&0x0000FFFF+((tdds[(posMemB>>16)&0x0000FFFF] & 0x0000FFFF)) - sizeB) ) { //En la segunda parte puede que sea modificado (el 4)
              printf("Error de segmentacion\n");
              exit(-420);
           }
@@ -772,14 +772,14 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
 
 void MOV(tppar op1,tppar op2){ ///0
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
 
    //no son partes cortas de registros
     *op1=*op2;
 
 }
 void ADD(tppar op1,tppar op2){ ///1
- printf("%s %04X\n ",__func__,reg[IP]);
+ //printf("%s %04X\n ",__func__,reg[IP]);
 
      *op1+=*op2;
 
@@ -791,7 +791,7 @@ void ADD(tppar op1,tppar op2){ ///1
        reg[CC]=0;
  }
 void SUB(tppar op1,tppar op2){ ///2
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
     *op1 -= *op2;
 
@@ -806,7 +806,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void SWAP(tppar op1,tppar op2){ ///3
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
     tpar aux;
 
     aux  = *op1;
@@ -814,7 +814,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
     *op2 = aux;
 }
 void MUL(tppar op1,tppar op2) { ///4
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    (*op1) *= (*op2);
 
@@ -828,7 +828,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
    reg[CC]<<=30;
 }
 void DIV(tppar op1,tppar op2) { ///5
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
 
    if (*op2 == 0) {
@@ -853,7 +853,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void CMP(tppar op1,tppar op2) { ///6
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
 
 
@@ -870,15 +870,15 @@ printf("%s %04X\n ",__func__,reg[IP]);
       reg[CC]<<=30;
 }
 void SHL(tppar op1,tppar op2) { ///7
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = *op1 << *op2;
 }
 void SHR(tppar op1,tppar op2) { ///8
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = *op1 >> *op2;
 }
 void AND(tppar op1,tppar op2) { ///9
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = (*op1) & (*op2);
 
    if (*op1==0)
@@ -890,7 +890,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
       reg[CC]<<=30;
 }
 void OR(tppar op1,tppar op2) { ///10 o A
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
     *op1 = (*op1) | (*op2);
 
    if (*op1==0)
@@ -902,7 +902,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
       reg[CC]<<=30;
 }
 void XOR(tppar op1,tppar op2) { ///11 o B
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
     *op1 = (*op1) ^ (*op2);
 
 
@@ -915,7 +915,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
       reg[CC]<<=30;
 }
 void SYS(tppar op1,tppar op2) { ///48 
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
  int i;
  unsigned int aux,k;
 
@@ -1136,48 +1136,48 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void JMP(tppar op1,tppar op2) { ///49
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    reg[IP]=*op1;
 }
 void JZ(tppar op1,tppar op2) { ///50
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)== 1)
       reg[IP]=*op1;
 }
 void JP(tppar op1,tppar op2) { ///51
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)==0)
       reg[IP]=*op1;
 }
 void JN(tppar op1,tppar op2) { ///52
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)==2)
       reg[IP]=*op1;
 }
 void JNZ(tppar op1,tppar op2) { ///53
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=1)
       reg[IP]=*op1;
 }
 void JNP(tppar op1,tppar op2) { ///54
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=0)
       reg[IP]=*op1;
 }
 void JNN(tppar op1,tppar op2) { ///55
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=2)
       reg[IP]=*op1;
 }
 void LDL(tppar op1,tppar op2) { //56
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -1186,7 +1186,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void LDH(tppar op1,tppar op2) { //57
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -1196,12 +1196,12 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void RND(tppar op1,tppar op2) { //58
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
 reg[AC]=rand() % (*op1 + 1);
 }
 void NOT(tppar op1,tppar op2) { //59
-printf("%s %04X\n ",__func__,reg[IP]);
+//printf("%s %04X\n ",__func__,reg[IP]);
 
    *op1= ~*op1;
 
@@ -1215,7 +1215,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
 
 }
 void PUSH(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
 
    reg[SP] -= 4;
    if (reg[SP] < reg[SS]) {
@@ -1229,7 +1229,7 @@ void PUSH(tppar op1,tppar op2){
 }
                                              
 void POP(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
       
    if (reg[SP] >= (reg[SS] + ((tdds[(reg[SS]) >> 16]) & 0x0000FFFF))){ // si la pila esta vacia
       printf("Error: Stack Underflow");
@@ -1246,7 +1246,7 @@ void POP(tppar op1,tppar op2){
 }
 
 void CALL(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
 
    /* int nuevoIP;
    nuevoIP  = 0x00001111;
@@ -1257,14 +1257,14 @@ void CALL(tppar op1,tppar op2){
    JMP(op1,0);
 }
 void STOP(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
 
    exit(1); 
 
 
 }
 void RET(tppar op1,tppar op2){
-   printf("%s %04X\n ",__func__,reg[IP]);
+   //printf("%s %04X\n ",__func__,reg[IP]);
    POP(&reg[IP],0);   
 }
 
