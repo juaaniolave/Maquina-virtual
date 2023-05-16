@@ -493,7 +493,7 @@ void inicializaFunciones(void (*funciones[cantFunciones])(tppar,tppar)){
 
 void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
-   char funciones[256][5];
+   char funciones[256][5]={0};
    char registros[16][4];
    tpar op1, op2;
 
@@ -1347,10 +1347,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
        // printf("%x ",CS[i++]);
    }
-   if (i>espacioCode){
-     printf("Error de segmentacion en CS");
-     exit(-3);
-   }
+
    *cantInstrucciones=i;
  //   printf("%d \n",*cantInstrucciones);
    }
@@ -1391,25 +1388,13 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
          printf ("No hay memoria suficiente para cargar todos los segmentos. Memoria necesaria: %dB, memoria disponible:%dB",espacioTotal,m);
          exit(-40);
       }
-      if (espacioCode>m){
-         printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
-         exit(-404);
-         }
+      for (i=0;i<((tdds[0]&0xFFFF)+(tdds[1]&0xFFFF));i++){ //CS + KS
+         fread(&byte, sizeof(byte), 1, arch); 
+         mv[i]=byte;
+         
+      }
 
-      while (fread(&byte, sizeof(byte), 1, arch)) {
-            if(i+1>m){
-               printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
-            exit(-404);
-         }
-         mv[i++]=byte;
-
-       // printf("%x ",CS[i++]);
-   }
-   if (i>(tdds[0]&0xFFFF)){
-     printf("Error de segmentacion en CS");
-     exit(-3);
-   }
-   *cantInstrucciones=i;
+   *cantInstrucciones=(tdds[0]&0xFFFF);
    }
 
    else{
