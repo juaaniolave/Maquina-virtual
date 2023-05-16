@@ -1082,7 +1082,7 @@ printf("%s %04X\n ",__func__,reg[IP]);
                            fwrite(&byte, sizeof(char), 1, arch);
                            byte='3';
                            fwrite(&byte, sizeof(char), 1, arch);
-                           byte=2;
+                           byte=1;
                            fwrite(&byte, sizeof(char), 1, arch);
                            byte=(tamanoMemoria>>8)&0x000000FF;
                            fwrite(&byte,sizeof(char), 1, arch);
@@ -1482,6 +1482,11 @@ void inicializaRegistros(int tamano_mv, char version){
       reg[BP]=reg[SP];
       
    }
-
+   
+      printf("code: %x \n",tdds[0]);
+      printf("constant: %x \n",tdds[1]);
+      printf("data: %x \n",tdds[2]);
+      printf("extra: %x \n",tdds[3]);
+      printf("stack: %x \n",tdds[4]);
 
 }
