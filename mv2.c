@@ -1437,7 +1437,7 @@ void inicializaRegistros(int tamano_mv, char version){
                for (int i=0;i<5;i++){  //si algun reg apuntaba a j+1, lo muevo a j
                  
                   if (((reg[i]>>16)&0xFFFF) == j+1){
-                     reg[i]-=0x0001000;
+                     reg[i]-=0x00010000;
                      break; 
                }
             }
