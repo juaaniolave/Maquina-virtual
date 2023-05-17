@@ -976,7 +976,7 @@ void SYS(tppar op1,tppar op2) { ///48
 
             for (i = ((tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF)) ; i < ((reg[ECX] >> 8) & 0xFF) * (reg[ECX] & 0xFF) + (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
               aux=0;
-            printf("[%04X]:",i-(tdds[reg[DS]>>16]>>16)+(reg[DS]&0x0000FFFF));
+            printf("[%04X]:",i-(tdds[reg[EDX]>>16]>>16));
             if (reg[EAX]&0b10) //si tiene que imprimir caracter
                   printf ("'");
 
@@ -1072,11 +1072,11 @@ void SYS(tppar op1,tppar op2) { ///48
                               exit (-409);
                            }
                            char byte;
-                           byte='v';
+                           byte='V';
                            fwrite(&byte, sizeof(char), 1, arch);
-                           byte='m';
+                           byte='M';
                            fwrite(&byte, sizeof(char), 1, arch);
-                           byte='i';
+                           byte='I';
                            fwrite(&byte, sizeof(char), 1, arch);
                            byte='2';
                            fwrite(&byte, sizeof(char), 1, arch);
