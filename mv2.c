@@ -188,7 +188,8 @@ int main(int argc, char *argv[]) {
          case 0b11:
             sizeA=1;
             break;
-      }
+      }  
+         int quetdds=((reg[(mv[address(reg[IP])])&0x0F]) >> 16) & 0x0000FFFF;
          auxA  = ((tdds[((reg[(mv[address(reg[IP])])&0x0F]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
          auxA += ((reg[mv[address(reg[IP]++)]&0x0F]) & 0x0000FFFF);
 
@@ -200,8 +201,8 @@ int main(int argc, char *argv[]) {
        //  printf("%02X ",cs[reg[IP]]);
           posMemA += auxA; // offset += valor del reg, por ej [DS+10]
 
-          if (!((tdds[(posMemA>>16)&0x0000FFFF])>>16)&0x0000FFFF <= posMemA && posMemA < ((tdds[(posMemA>>16)&0x0000FFFF]>>16)&0x0000FFFF+((tdds[(posMemA>>16)&0x0000FFFF] & 0x0000FFFF)) - sizeA) ) { //En la segunda parte puede que sea modificado (el 4)
-             printf("Error de segmentacion\n");
+          if ((((tdds[quetdds]>>16)&0xFFFF)) > posMemA || ((((tdds[quetdds]>>16)&0xFFFF))+(((tdds[quetdds])&0xFFFF)) < (posMemA+sizeA)) ) { //En la segunda parte puede que sea modificado (el 4)
+             printf("Error: Segmentation fault\n");
              exit(-420);
           }
 
@@ -278,7 +279,7 @@ int main(int argc, char *argv[]) {
             sizeB=1;
             break;
        }
-         
+         int quetdds=((reg[(mv[address(reg[IP])])&0x0F]) >> 16) & 0x0000FFFF;
          auxB = ((tdds[((reg[(mv[address(reg[IP])])&0xF])>>16)&0x0000FFFF])>>16)&0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
          auxB +=((reg[mv[address(reg[IP]++)]&0xF])&0x0000FFFF);
 
@@ -291,8 +292,8 @@ int main(int argc, char *argv[]) {
 
          posMemB += auxB; // offset += valor del reg, por ej [DS+10]
          
-          if (!((tdds[(posMemB>>16)&0x0000FFFF])>>16)&0x0000FFFF <= posMemB && posMemB < ((tdds[(posMemB>>16)&0x0000FFFF]>>16)&0x0000FFFF+((tdds[(posMemB>>16)&0x0000FFFF] & 0x0000FFFF)) - sizeB) ) { //En la segunda parte puede que sea modificado (el 4)
-             printf("Error de segmentacion\n");
+          if ((((tdds[quetdds]>>16)&0xFFFF)) > posMemB || ((((tdds[quetdds]>>16)&0xFFFF))+(((tdds[quetdds])&0xFFFF)) < (posMemB+sizeB)) )  { //En la segunda parte puede que sea modificado (el 4)
+             printf("Error: Segmentation fault\n");
              exit(-420);
           }
 
@@ -683,7 +684,7 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
       else if (tOpA==1){
          if((codOp >=49 && codOp <=55) || codOp == 62 ) //es algun jump tiene q mostrar en hexa
             printf("%X\t",op1);
-         else if (codOp==48){
+         else if (codOp==48 | codOp==60 || codOp == 61 || codOp == 62){
             printf("%d\t",op1);// es sys, muestra sin la coma
          } else
           printf("%d,\t",op1);
@@ -726,12 +727,12 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
             };
             if ((op2)&0x00FFFF){
                if ((op2)<<16>>16 < 0)
-                  printf("%c[%s%d], ",size,registros[(op2 >> 16) & 0xF],(op2)<<16>>16); //si es negativo, usa signo menos
+                  printf("%c[%s%d] ",size,registros[(op2 >> 16) & 0xF],(op2)<<16>>16); //si es negativo, usa signo menos
                else
-                  printf("%c[%s+%d],\t",size,registros[(op2>>16)&0xF],(op2)&0x0000FFFF);
+                  printf("%c[%s+%d]\t",size,registros[(op2>>16)&0xF],(op2)&0x0000FFFF);
             }
             else
-               printf("%c[%s],\t",size,registros[(op2>>16)&0xF]);
+               printf("%c[%s]\t",size,registros[(op2>>16)&0xF]);
          }
 
       else if (tOpB==1){
@@ -925,7 +926,7 @@ void SYS(tppar op1,tppar op2) { ///48
          case 1: //interpreta decimal
             for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
                scanf("%d",&aux); //guarda en aux para despues recortar
-               k=24;
+               k=8*((reg[ECX]>>8)&0xFF)-8;
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
                   mv[i++]=((aux>>k)&0x000000FF);
                   k-=8;
@@ -936,6 +937,7 @@ void SYS(tppar op1,tppar op2) { ///48
          case 2: //intepreta caracter
             for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
                scanf("%c",&aux); //guarda en aux para despues recortar
+               k=8*((reg[ECX]>>8)&0xFF)-8;
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
                   mv[i++]=(aux>>k)&0x000000FF;
                   k-=8;
@@ -946,6 +948,7 @@ void SYS(tppar op1,tppar op2) { ///48
          case 4: // interpreta octal
             for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
                scanf("%o",&aux); //guarda en aux para despues recortar
+               k=8*((reg[ECX]>>8)&0xFF)-8;
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
                   mv[i++]=(aux>>k)&0x000000FF;
                   k-=8;
@@ -956,6 +959,7 @@ void SYS(tppar op1,tppar op2) { ///48
          case 8: // interpreta Hexa
             for (i = ((tdds[reg[EDX] >> 16] >> 16) + reg[EDX] & 0x0000FFFF) ; i < ((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
                scanf("%x",&aux); //guarda en aux para despues recortar
+               k=8*((reg[ECX]>>8)&0xFF)-8;
                for (int j = 0 ; j < ((reg[ECX] >> 8) & 0xFF) ; j++){ //recorta y almacena
                   mv[i++] = (aux >> k) & 0x000000FF;
                   k-=8;

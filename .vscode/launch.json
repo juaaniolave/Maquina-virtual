@@ -11,7 +11,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/mv2.exe",
-            "args": ["1iterativo-3pwr5.vmx", "-d","m=35000","archivo.vmi"],
+            "args": ["sample4.vmx", "-d","m=35000","archivo.vmi"],
             "cwd": "${workspaceFolder}",
             "externalConsole": true,
             "stopAtEntry": false,
