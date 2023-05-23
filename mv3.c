@@ -76,7 +76,7 @@ char debugger[30]="\0";
 char breakpoint=0;
 
 struct {
-   char* discos[255];
+   FILE* discos[255];
    char size;
 } discos;
 
