@@ -36,6 +36,12 @@ void inicializaFunciones(void (*funciones[cantFunciones])(tppar,tppar));
 void leeArchivoBinario(unsigned char[], int* ,char*,int, char*);
 void inicializaRegistros(int,char);
 void dissasambly(unsigned char[],int);
+void stringWrite();
+void leeDeTeclado();
+void stringRead();
+void imprimePorPantalla();
+void breakpointDebugger();
+void clearScreen();
 short calculaTamanoMV();
 FILE* creaArchivoDisco(char*);
 
@@ -70,12 +76,11 @@ void STOP(tppar,tppar);
 void RET(tppar,tppar);
 tpar address(tpar);
 
-//unsigned char mv[MV_SIZE];
 unsigned char* mv;
 char debugger[30]="\0";
 char breakpoint=0;
 
-struct {
+struct tdiscos {
    FILE* discos[255];
    char size;
 } discos;
@@ -99,6 +104,7 @@ int main(int argc, char *argv[]) {
    inicializaFunciones(funciones);
 
    discos.size=0;
+
    for (int i = 1; i < argc; i++) {
       char *param = argv[i];
       if (strstr(param, extension_vmx) != NULL)  //.vmx
@@ -107,16 +113,14 @@ int main(int argc, char *argv[]) {
       else if (strstr(param, extension_vmi) != NULL) //.vmi
          strcpy(debugger,param);
 
-      else if (strstr(param, extension_vdd) != NULL){ //.vdd
+      else if (strstr(param, extension_vdd) != NULL)//.vdd
          discos.discos[discos.size++]=creaArchivoDisco(param);
-        
-      }
-
+            
       else if (strncmp(argv[i], "m=", 2) == 0) { //m=M
          m = atoi(argv[i] + 2); // Extracción del valor de M como un entero
          mv = (char*)malloc(sizeof(char)*m);
          memset(mv, 0, m); //inicializa en 0 todo mv
-   }
+      }
    }
 
    if (nombre_archivo == NULL) {
@@ -155,12 +159,10 @@ int main(int argc, char *argv[]) {
 
       treg1 = treg2 = op1 = op2 = aux1 = 0;
 
-  //    printf("[%04X]  ",reg[IP]);
 
       tOpA = (mv[address(reg[IP])] >> 6) & 3; // asigna los bits 11000000
       tOpB = (mv[address(reg[IP])] >> 4) & 3; // asigna los bits 00110000
 
-    //  printf("%02X ",cs[reg[IP]]);
 
       if (tOpB == 3){ // cod operacion uno o sin operandos
 
@@ -178,7 +180,6 @@ int main(int argc, char *argv[]) {
       //asigno valores a los operandos dependiendo el tama�o
 
       if (tOpA == 0){  // operando apunta a direccion en memoria
-      //   printf("%02X ",cs[reg[IP]]);
 
       switch (((mv[address(reg[IP])]) >> 6) & 0b11) { //si es long(l), word(w) o byte(b)
          
@@ -195,16 +196,14 @@ int main(int argc, char *argv[]) {
          int quetdds=((reg[(mv[address(reg[IP])])&0x0F]) >> 16) & 0x0000FFFF;
          auxA  = ((tdds[((reg[(mv[address(reg[IP])])&0x0F]) >> 16) & 0x0000FFFF]) >> 16) & 0x0000FFFF; //valor del registro, por ejemplo lo que esta contenido en DS (0x00010000)
          auxA += ((reg[mv[address(reg[IP]++)]&0x0F]) & 0x0000FFFF);
-
+         
          posMemA = mv[address(reg[IP]++)];
          posMemA <<= 8;
-      //   printf("%02X ",cs[reg[IP]]);
 
          posMemA |= mv[address(reg[IP]++)];
-       //  printf("%02X ",cs[reg[IP]]);
-          posMemA += auxA; // offset += valor del reg, por ej [DS+10]
+         posMemA += auxA; // offset += valor del reg, por ej [DS+10]
 
-          if ((((tdds[quetdds]>>16)&0xFFFF)) > posMemA || ((((tdds[quetdds]>>16)&0xFFFF))+(((tdds[quetdds])&0xFFFF)) < (posMemA+sizeA)) ) { //En la segunda parte puede que sea modificado (el 4)
+          if ((((tdds[quetdds]>>16)&0xFFFF)) > posMemA || ((((tdds[quetdds]>>16)&0xFFFF))+(((tdds[quetdds])&0xFFFF)) < (posMemA+sizeA)) ) {
              printf("Error: Segmentation fault\n");
              exit(-420);
           }
@@ -219,17 +218,15 @@ int main(int argc, char *argv[]) {
          op1 <<= (32-sizeA*8);
          op1 >>= (32-sizeA*8);
 
-         //pOp1=&(ds[op1]);
-
          pOp1 =& op1;
       }
 
 
       else if (tOpA == 1){
-       //  printf("%02X ",cs[reg[IP]]);
+
          op1 = mv[address(reg[IP]++)];
          op1 = op1 <<  8;
-     //    printf("%02X ",cs[reg[IP]]);
+
          op1 = op1 | mv[address(reg[IP]++)];
          op1<<=16; op1>>=16;
 
@@ -237,7 +234,7 @@ int main(int argc, char *argv[]) {
 
       }
       else if (tOpA == 2){
-      //   printf("%02X ",cs[reg[IP]]);
+
          treg1 = (mv[address(reg[IP])] >> 4) & 0b0011;
          op1   = mv[address(reg[IP]++)] & 0b1111;
 
@@ -268,7 +265,6 @@ int main(int argc, char *argv[]) {
 
       if (tOpB == 0){
          int auxB;
-      //   printf("%02X ",cs[reg[IP]]);
 
       switch (((mv[address(reg[IP])])>>6)&0b11) { //si es long(l), word(w) o byte(b)
          
@@ -288,10 +284,8 @@ int main(int argc, char *argv[]) {
 
          posMemB = mv[address(reg[IP]++)];
          posMemB <<= 8;
-       //  printf("%02X ",cs[reg[IP]]);
 
          posMemB |= mv[address(reg[IP]++)];
-       //  printf("%02X ",cs[reg[IP]]);
 
          posMemB += auxB; // offset += valor del reg, por ej [DS+10]
          
@@ -310,15 +304,13 @@ int main(int argc, char *argv[]) {
          op2<<=32-sizeB*8;
          op2>>=32-sizeB*8;
 
-         //pOp1=&(ds[op1]);
-
          pOp2 =& op2;
       }
       else if (tOpB == 1){
-       //  printf("%02X ",cs[reg[IP]]);
+
          op2 = mv[address(reg[IP]++)];
          op2 = op2 <<  8;
-      //   printf("%02X ",cs[reg[IP]]);
+
          op2 = op2 | mv[address(reg[IP]++)];
          op2<<=16; op2>>=16;
 
@@ -327,7 +319,7 @@ int main(int argc, char *argv[]) {
       }
       else
          if (tOpB == 2){
-            //printf("%02X ",cs[reg[IP]]);
+
             treg2 = (mv[address(reg[IP])] >> 4) & 0b0011;
             op2   = mv[address(reg[IP]++)] & 0b1111;
             aux2 = op2;
@@ -353,16 +345,14 @@ int main(int argc, char *argv[]) {
 
          }
 
-   //  printf("\t | \t");
-
-   if (funciones[codOp] == NULL) {
+      if (funciones[codOp] == NULL) {
       printf("Error: Codigo de operacion invalido\n");
       exit(1);
-   }
+      }
 
-    funciones[codOp](pOp1,pOp2);
+      funciones[codOp](pOp1,pOp2);
 
-   if (tOpA == 2) { //mande un registro como tOpA
+      if (tOpA == 2) { //mande un registro como tOpA
          switch (treg1)
          {
             //nada, es el registro completo EAX
@@ -388,74 +378,61 @@ int main(int argc, char *argv[]) {
                reg[aux1] |= *pOp1;
             break;
          }
-   }
-   else
-      if (tOpA == 0){
-
-
-         for (int j = sizeA-1; j >= 0 ; j--){ //recorta y almacena las celdas de memoria en op2
-            mv[posMemA + j] = ((*pOp1)&0x000000FF);
-            *pOp1 >>= 8;
-         }
-
-         
-         // mv[posMemA]     = (0xFF000000 & *pOp1)>>24;
-         // mv[posMemA + 1] = (0x00FF0000 & *pOp1)>>16;
-         // mv[posMemA + 2] = (0x0000FF00 & *pOp1)>>8;
-         // mv[posMemA + 3] = (0x000000FF & *pOp1);
-
-      }
-   if (codOp == 3) { //codOP 3 = SWAP
-      if (tOpB == 0) {
-
-         for (int j = sizeB-1; j >= 0 ; j--){ //recorta y almacena las celdas de memoria en op2
-            mv[posMemB + j] = ((*pOp2)&0x000000FF);
-            *pOp2>>=8;
-         }
-
-         // mv[posMemB]     = (0xFF000000 & *pOp2)>>24;
-         // mv[posMemB + 1] = (0x00FF0000 & *pOp2)>>16;
-         // mv[posMemB + 2] = (0x0000FF00 & *pOp2)>>8;
-         // mv[posMemB + 3] = (0x000000FF & *pOp2);
-
       }
       else
-         if (tOpB == 2) {
-            switch (treg2)
-            {
-            //nada, es el registro completo EAX
-            case 0b00: reg[aux2] = *pOp2;
-               break;
-            //Low register, AL
-            case 0b01:
-               reg[aux2] &= 0xFFFFFF00;
-               op2&=0x000000FF;
-               reg[aux2] |= op2;
-            break;
-            //High register, AH
-            case 0b10:
-               reg[aux2] &= 0xFFFF00FF;
-               *pOp2   <<= 8;
-               op1&=0x0000FF00;
-               reg[aux2] |= *pOp2;
-            break;
-            //Mitad del registro, AX
-            case 0b11:
-               reg[aux2] &= 0xFFFF0000;
-               op1&=0x0000FFFF;
-               reg[aux2] |= *pOp2;
-            break;
+         if (tOpA == 0){
+
+
+            for (int j = sizeA-1; j >= 0 ; j--){ //recorta y almacena las celdas de memoria en op2
+               mv[posMemA + j] = ((*pOp1)&0x000000FF);
+               *pOp1 >>= 8;
             }
+
+      }
+      if (codOp == 3) { //codOP 3 = SWAP
+         if (tOpB == 0) {
+
+            for (int j = sizeB-1; j >= 0 ; j--){ //recorta y almacena las celdas de memoria en op2
+               mv[posMemB + j] = ((*pOp2)&0x000000FF);
+               *pOp2>>=8;
+            }
+
          }
-   }
+         else
+            if (tOpB == 2) {
+               switch (treg2)
+               {
+               //nada, es el registro completo EAX
+               case 0b00: reg[aux2] = *pOp2;
+                  break;
+               //Low register, AL
+               case 0b01:
+                  reg[aux2] &= 0xFFFFFF00;
+                  op2&=0x000000FF;
+                  reg[aux2] |= op2;
+               break;
+               //High register, AH
+               case 0b10:
+                  reg[aux2] &= 0xFFFF00FF;
+                  *pOp2   <<= 8;
+                  op1&=0x0000FF00;
+                  reg[aux2] |= *pOp2;
+               break;
+               //Mitad del registro, AX
+               case 0b11:
+                  reg[aux2] &= 0xFFFF0000;
+                  op1&=0x0000FFFF;
+                  reg[aux2] |= *pOp2;
+               break;
+               }
+            }
+      }
       if (breakpoint==1){ //sigue ejecutando el breakpoint
       int F = 15;
       funciones[48](&F,0);
+      }
    }
 
-
-  // printf("\n");
-   }
 
 
     return 0;
@@ -761,10 +738,6 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
          }
 
 
-      // if (tOpA==0){
-      //    printf("[%s + %d] \t",registros[op1]);
-      // }
-
       printf("\n");
 
 
@@ -778,7 +751,6 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 void MOV(tppar op1,tppar op2){ ///0
    //printf("%s %04X\n ",__func__,reg[IP]);
 
-   //no son partes cortas de registros
     *op1=*op2;
 
 }
@@ -920,222 +892,35 @@ void XOR(tppar op1,tppar op2) { ///11 o B
 }
 void SYS(tppar op1,tppar op2) { ///48 
 //printf("%s %04X\n ",__func__,reg[IP]);
- int i;
- unsigned int aux,k;
 
-   if (*op1 == 1){ //scanf
-      switch (reg[EAX]&0b0001111) {
+   if (*op1 == 1)
 
-         case 1: //interpreta decimal
-            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
-               scanf("%d",&aux); //guarda en aux para despues recortar
-               k=8*((reg[ECX]>>8)&0xFF)-8;
-               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  mv[i++]=((aux>>k)&0x000000FF);
-                  k-=8;
-               }
-            }
-         break;
+      leeDeTeclado();
 
-         case 2: //intepreta caracter
-            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
-               scanf("%c",&aux); //guarda en aux para despues recortar
-               k=8*((reg[ECX]>>8)&0xFF)-8;
-               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  mv[i++]=(aux>>k)&0x000000FF;
-                  k-=8;
-               }
-            }
-         break;
+   else if(*op1 == 2)
 
-         case 4: // interpreta octal
-            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
-               scanf("%o",&aux); //guarda en aux para despues recortar
-               k=8*((reg[ECX]>>8)&0xFF)-8;
-               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
-                  mv[i++]=(aux>>k)&0x000000FF;
-                  k-=8;
-               }
-            }
-         break;
+      imprimePorPantalla();
+   
+   else if(*op1 == 3) 
 
-         case 8: // interpreta Hexa
-            for (i = ((tdds[reg[EDX] >> 16] >> 16) + reg[EDX] & 0x0000FFFF) ; i < ((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
-               scanf("%x",&aux); //guarda en aux para despues recortar
-               k=8*((reg[ECX]>>8)&0xFF)-8;
-               for (int j = 0 ; j < ((reg[ECX] >> 8) & 0xFF) ; j++){ //recorta y almacena
-                  mv[i++] = (aux >> k) & 0x000000FF;
-                  k-=8;
-               }
-            }
-         break;
+      stringRead();
 
-      default:
-         printf("\nError, valor de operacion para SYS invalido\n");
-         exit(-3);
-         break;
-      }
+   else if (*op1 == 4)
+      
+      stringWrite();
 
-   }
+   else if (*op1 == 7)
+      
+      clearScreen();
 
-   else 
-      if(*op1 == 2){ 
+   else if(*op1 == 13) 
 
-            for (i = ((tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF)) ; i < ((reg[ECX] >> 8) & 0xFF) * (reg[ECX] & 0xFF) + (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
-              aux=0;
-            printf("[%04X]:",i-(tdds[reg[EDX]>>16]>>16));
-            if (reg[EAX]&0b10) //si tiene que imprimir caracter
-                  printf ("'");
+      accesoDisco();
+      
+   else if (*op1 == 15) 
 
-               for (int j = 0; j < ((reg[ECX] >> 8) & 0xFF) ; j++){ //recorta y almacena
-                  
-                  if (reg[EAX] & 0b10){ //si tiene que imprimir caracter
-                     
-                     if (isprint(mv[i]))
-                        printf("%c",mv[i]);
-                     else 
-                        printf(".");
-                  }
-
-                  aux=aux<<8;
-                  aux=aux|mv[i++]; //guarda en aux para ir armando el int
-               }
-            if (reg[EAX] & 0b10) //si tiene que imprimir caracter
-                  printf (" ");
-            if (reg[EAX] & 0b1) 
-             printf("#%d ",aux);
-
-            if (reg[EAX] & 0b100)
-             printf("@%o ",aux);
-
-            if (reg[EAX] & 0b1000)
-             printf("%%%X",aux);
-            
-            printf("\n");
-            }
-      }
-      else 
-         if(*op1 == 3) { //STRING READ
-            short longitudd;
-            int  i, j;
-            char palabra[50]; // DEFINICION INICIAL!¡
-            scanf("%s",palabra);
-            longitudd = (reg[ECX] & 0x0000FFFF);
-
-            i = (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);
-            j = 0;
-
-            if (longitudd == -1) { //cantidad ilimitada de caracteres
-              
-               while (j <= strlen(palabra)) {
-                  mv[i] = palabra[j];
-                  i++;
-                  j++;
-               }
-            } 
-            else { //cantidad limitada de caracteres
-               while (j <= longitudd) {
-                  mv[i] = palabra[j];
-                  i++;
-                  j++;
-               }
-            }  
-
-         }
-         else 
-            if (*op1 == 4) { //STRING WRITE
-
-               short longitudd, i, j;
-               longitudd = reg[ECX] & 0x0000FFFF;
-               i = (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);
-               j = 0;
-
-               if (longitudd == -1) { //imprimo hasta encontrar 0x00
-                  while (mv[i] != 0x00) {
-                     printf("%c",mv[i]);
-                     i++;
-                  }
-               }
-               else {
-                  while (j < longitudd && mv[i] != 0x00) { //cantidad limitada de caracteres
-                     printf("%c",mv[i]);
-                     i++;
-                     j++;
-                  }
-               }
-         
-            }
-            else
-               if (*op1 == 7) //CLEAR SCREEN
-                  system("cls"); 
-               else
-                  if (*op1 == 15) { //BREAKPOINT
-                     if (strcmp(debugger,"\0")){
-                        short tamanoMemoria = calculaTamanoMV(); // calcula el tamaño de la mv apartir del tdds
-                        
-                        FILE *arch = fopen(debugger,"wb");
-                           if (arch == NULL) {
-                           printf("Error al crear el archivo.\n");
-                              exit (-409);
-                           }
-                           char byte;
-                           byte='V';
-                           fwrite(&byte, sizeof(char), 1, arch);
-                           byte='M';
-                           fwrite(&byte, sizeof(char), 1, arch);
-                           byte='I';
-                           fwrite(&byte, sizeof(char), 1, arch);
-                           byte='2';
-                           fwrite(&byte, sizeof(char), 1, arch);
-                           byte='3';
-                           fwrite(&byte, sizeof(char), 1, arch);
-                           byte=1;
-                           fwrite(&byte, sizeof(char), 1, arch);
-                           byte=(tamanoMemoria>>8)&0x000000FF;
-                           fwrite(&byte,sizeof(char), 1, arch);
-                           byte=(tamanoMemoria)&0x000000FF;
-                           fwrite(&byte,sizeof(char), 1, arch);
-
-                        for (int i = 0 ; i < cantRegistros ;i++) { 
-                           for (int j=0; j<4; j++){
-                              byte=(reg[i]>>24-j*8)&0x0000FFFF;
-                              fwrite(&byte, sizeof(char), 1, arch); 
-                           }
-                        }
-                        for (int i = 0 ; i < TDDS_SIZE; i++ ) {
-                           for (int j=0; j<4 ;j++){
-                              byte=(tdds[i]>>24-j*8)&0x0000FFFF;
-                              fwrite(&byte, sizeof(char), 1, arch); 
-                           }
-                        }
-                        for (int i = 0 ; i<tamanoMemoria; i++ )
-                              fwrite(mv+i, sizeof(char), 1, arch); 
-
-                        fclose(arch);
-                        printf("Breakpoint alcanzado. Se generó el archivo de imagen.\n");
-
-                        // Esperar acciones del usuario
-                        char respuesta[256];
-                        
-                        printf("Presione 'q' para continuar o Enter para ejecutar la siguiente instrucción: \n");
-                        
-                        fgets(respuesta,256,stdin);
-                        while (strcmp(respuesta,"q\n") && strcmp(respuesta,"\n")){
-                           
-                           fgets(respuesta,256,stdin);
-                        }
-
-                           // Evaluar la acción del usuario
-                           if (!strcmp(respuesta,"q\n")) {
-                              breakpoint=0;
-                           } 
-                           else if(!strcmp(respuesta,"\n")) { // ingreso Enter
-                              breakpoint=1;
-                           }
-                        
-                     }  
-                  
-                  }
+      breakpointDebugger();
+   
    else {
       printf("\nError! Parametro invalido en funcion SYS\n");
       exit(-2);
@@ -1233,8 +1018,7 @@ void PUSH(tppar op1,tppar op2){
    for (int i = 0; i< 4 ; i++) {
       mv[address(reg[SP]) + i] = (*op1)>> (24-i*8);
    }
-}
-                                             
+}                                            
 void POP(tppar op1,tppar op2){
    //printf("%s %04X\n ",__func__,reg[IP]);
       
@@ -1251,14 +1035,8 @@ void POP(tppar op1,tppar op2){
    }
    reg[SP]+=4;
 }
-
 void CALL(tppar op1,tppar op2){
    //printf("%s %04X\n ",__func__,reg[IP]);
-
-   /* int nuevoIP;
-   nuevoIP  = 0x00001111;
-   reg[IP] &= 0x11110000;
-   nuevoIP |= reg[IP];*/
    
    PUSH(reg+IP,0); //reg+IP porque se manda puntero 
    JMP(op1,0);
@@ -1274,7 +1052,6 @@ void RET(tppar op1,tppar op2){
    //printf("%s %04X\n ",__func__,reg[IP]);
    POP(&reg[IP],0);   
 }
-
 tpar address(tpar num) {
 
    //recibe puntero a memoria y devuelve la direccion
@@ -1283,7 +1060,6 @@ tpar address(tpar num) {
    tpar posmem = ((tdds[cualtdds]>>16)&0x0000FFFF) + (num&0x0000FFFF);
    return posmem;
 }
-
 short calculaTamanoMV(){
    
    char i=0;
@@ -1294,7 +1070,6 @@ short calculaTamanoMV(){
    
  return tamano;
 }
-
 void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m, char* version){
 
     FILE* arch = fopen(nombre_archivo,"rb");
@@ -1331,14 +1106,12 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
     tdds[0]   = 0x0000; //posicion del code segment
     tdds[0] <<= 16;
    
-    //  printf("%x ",*cantInstrucciones); --> quedo de antes (no lo saco por las dudas)
-    tdds[0] |= espacioCode; //tamano del code segment
+      tdds[0] |= espacioCode; //tamano del code segment
    // printf("code segment: %X \n",tdds[0]);
 
     tdds[1]   = espacioCode; // posicion del data segment
     tdds[1] <<= 16;
     tdds[1]  |= (MV_SIZE - espacioCode); //tamano del data segment
-  //  printf("data segment: %X \n\n",tdds[1]);
 
    if (espacioCode > m) {
       printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
@@ -1352,11 +1125,10 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
          }
          mv[i++] = byte;
 
-       // printf("%x ",CS[i++]);
    }
 
    *cantInstrucciones=i;
- //   printf("%d \n",*cantInstrucciones);
+
    }
    
    else if (*version==2){
@@ -1410,7 +1182,6 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
    }
     fclose(arch);
 }
-
 void inicializaRegistros(int tamano_mv, char version){
 
   if (version==1){
@@ -1446,60 +1217,11 @@ void inicializaRegistros(int tamano_mv, char version){
                   if (((reg[i]>>16)&0xFFFF) == j+1){
                      reg[i]-=0x00010000;
                      break; 
+                  }
                }
             }
+
          }
-
-      }
-/*
-      if ((tdds[0]&0xFFFF)<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-         reg[CS]=-1;
-         reg[KS]-=0x00010000;
-         reg[DS]-=0x00010000;    
-         reg[ES]-=0x00010000;  
-         reg[SS]-=0x00010000;
-
-         tdds[0]=tdds[1];
-         tdds[1]=tdds[2];
-         tdds[2]=tdds[3];
-         tdds[3]=tdds[4];
-         tdds[4]=tdds[5];
-         k++;
-      }
-
-      if ((tdds[1]&0xFFFF)<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-         reg[KS]=-1;
-         reg[DS]-=0x00010000;    
-         reg[ES]-=0x00010000;  
-         reg[SS]-=0x00010000;
-
-         tdds[1]=tdds[2];
-         tdds[2]=tdds[3];
-         tdds[3]=tdds[4];
-         tdds[4]=tdds[5];
-      }
-      if ((tdds[2]&0xFFFF)<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-         reg[DS]=-1;
-         reg[ES]-=0x00010000;  
-         reg[SS]-=0x00010000;
-
-         tdds[2]=tdds[3];
-         tdds[3]=tdds[4];
-         tdds[4]=tdds[5];
-      }
-      if ((tdds[3]&0xFFFF)<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-         reg[ES]=-1;
-         reg[SS]-=0x00010000;
-
-         tdds[3]=tdds[4];
-         tdds[4]=tdds[5];
-      }
-
-      if ((tdds[4]&0xFFFF)<=0){ //si el tamaño del segmento es menor a 0, el reg que corresponde queda con -1 y se corren todos los tdds para arriba
-         tdds[4]=tdds[5];
-         reg[SS]=-1;  
-      
- */  
       }
       reg[SP]=reg[SS] + (tdds[reg[SS]>>16] & 0x0000FFFF); //inicio del StackSegment + offset (el puntero va al final del segmento )
       reg[BP]=reg[SP];
@@ -1508,6 +1230,215 @@ void inicializaRegistros(int tamano_mv, char version){
 
 
    
+}
+
+void leeDeTeclado() { //op1 = 1
+   int i;
+   int aux;
+   int k;
+      switch (reg[EAX]&0b0001111) {
+
+         case 1: //interpreta decimal
+            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+               scanf("%d",&aux); //guarda en aux para despues recortar
+               k=8*((reg[ECX]>>8)&0xFF)-8;
+               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
+                  mv[i++]=((aux>>k)&0x000000FF);
+                  k-=8;
+               }
+            }
+         break;
+
+         case 2: //intepreta caracter
+            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+               scanf("%c",&aux); //guarda en aux para despues recortar
+               k=8*((reg[ECX]>>8)&0xFF)-8;
+               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
+                  mv[i++]=(aux>>k)&0x000000FF;
+                  k-=8;
+               }
+            }
+         break;
+
+         case 4: // interpreta octal
+            for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+               scanf("%o",&aux); //guarda en aux para despues recortar
+               k=8*((reg[ECX]>>8)&0xFF)-8;
+               for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
+                  mv[i++]=(aux>>k)&0x000000FF;
+                  k-=8;
+               }
+            }
+         break;
+
+         case 8: // interpreta Hexa
+            for (i = ((tdds[reg[EDX] >> 16] >> 16) + reg[EDX] & 0x0000FFFF) ; i < ((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+               scanf("%x",&aux); //guarda en aux para despues recortar
+               k=8*((reg[ECX]>>8)&0xFF)-8;
+               for (int j = 0 ; j < ((reg[ECX] >> 8) & 0xFF) ; j++){ //recorta y almacena
+                  mv[i++] = (aux >> k) & 0x000000FF;
+                  k-=8;
+               }
+            }
+         break;
+
+      default:
+         printf("\nError, valor de operacion para SYS invalido\n");
+         exit(-3);
+         break;
+      }
+
+   }
+void imprimePorPantalla(){ //op1 = 2
+   int i,aux;
+   for (i = ((tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF)) ; i < ((reg[ECX] >> 8) & 0xFF) * (reg[ECX] & 0xFF) + (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH (cantidad de datos a leer)
+         aux=0;
+      printf("[%04X]:",i-(tdds[reg[EDX]>>16]>>16));
+      if (reg[EAX]&0b10) //si tiene que imprimir caracter
+            printf ("'");
+
+         for (int j = 0; j < ((reg[ECX] >> 8) & 0xFF) ; j++){ //recorta y almacena
+            
+            if (reg[EAX] & 0b10){ //si tiene que imprimir caracter
+               
+               if (isprint(mv[i]))
+                  printf("%c",mv[i]);
+               else 
+                  printf(".");
+            }
+
+            aux=aux<<8;
+            aux=aux|mv[i++]; //guarda en aux para ir armando el int
+         }
+      if (reg[EAX] & 0b10) //si tiene que imprimir caracter
+            printf (" ");
+      if (reg[EAX] & 0b1) 
+         printf("#%d ",aux);
+
+      if (reg[EAX] & 0b100)
+         printf("@%o ",aux);
+
+      if (reg[EAX] & 0b1000)
+         printf("%%%X",aux);
+      
+      printf("\n");
+      }
+}
+void stringRead(){ //op1=3
+   short longitudd;
+   int  i, j;
+   char palabra[50]; // DEFINICION INICIAL!¡
+   scanf("%s",palabra);
+   longitudd = (reg[ECX] & 0x0000FFFF);
+
+   i = (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);
+   j = 0;
+
+   if (longitudd == -1) { //cantidad ilimitada de caracteres
+      
+      while (j <= strlen(palabra)) {
+         mv[i] = palabra[j];
+         i++;
+         j++;
+      }
+   } 
+   else { //cantidad limitada de caracteres
+      while (j <= longitudd) {
+         mv[i] = palabra[j];
+         i++;
+         j++;
+      }
+   }   
+}
+void stringWrite(){ //op1 = 4         
+         short longitudd, i, j;
+         longitudd = reg[ECX] & 0x0000FFFF;
+         i = (tdds[reg[EDX] >> 16] >> 16) + (reg[EDX] & 0x0000FFFF);
+         j = 0;
+
+         if (longitudd == -1) { //imprimo hasta encontrar 0x00
+            while (mv[i] != 0x00) {
+               printf("%c",mv[i]);
+               i++;
+            }
+         }
+         else {
+            while (j < longitudd && mv[i] != 0x00) { //cantidad limitada de caracteres
+               printf("%c",mv[i]);
+               i++;
+               j++;
+            }
+         }
+   
+}
+void clearScreen(){//op1 = 7
+   system("cls");
+}
+void breakpointDebugger(){ //op1 = 15 o F
+   if (strcmp(debugger,"\0")){
+      short tamanoMemoria = calculaTamanoMV(); // calcula el tamaño de la mv apartir del tdds
+            
+      FILE *arch = fopen(debugger,"wb");
+      if (arch == NULL) {
+         printf("Error al crear el archivo.\n");
+            exit (-409);
+         }
+         char byte;
+         byte='V';
+         fwrite(&byte, sizeof(char), 1, arch);
+         byte='M';
+         fwrite(&byte, sizeof(char), 1, arch);
+         byte='I';
+         fwrite(&byte, sizeof(char), 1, arch);
+         byte='2';
+         fwrite(&byte, sizeof(char), 1, arch);
+         byte='3';
+         fwrite(&byte, sizeof(char), 1, arch);
+         byte=1;
+         fwrite(&byte, sizeof(char), 1, arch);
+         byte=(tamanoMemoria>>8)&0x000000FF;
+         fwrite(&byte,sizeof(char), 1, arch);
+         byte=(tamanoMemoria)&0x000000FF;
+         fwrite(&byte,sizeof(char), 1, arch);
+
+      for (int i = 0 ; i < cantRegistros ;i++) { 
+         for (int j=0; j<4; j++){
+            byte=(reg[i]>>24-j*8)&0x0000FFFF;
+            fwrite(&byte, sizeof(char), 1, arch); 
+         }
+      }
+      for (int i = 0 ; i < TDDS_SIZE; i++ ) {
+         for (int j=0; j<4 ;j++){
+            byte=(tdds[i]>>24-j*8)&0x0000FFFF;
+            fwrite(&byte, sizeof(char), 1, arch); 
+         }
+      }
+      for (int i = 0 ; i<tamanoMemoria; i++ )
+            fwrite(mv+i, sizeof(char), 1, arch); 
+
+      fclose(arch);
+      printf("Breakpoint alcanzado. Se generó el archivo de imagen.\n");
+
+      // Esperar acciones del usuario
+      char respuesta[256];
+      
+      printf("Presione 'q' para continuar o Enter para ejecutar la siguiente instrucción: \n");
+      
+      fgets(respuesta,256,stdin);
+      while (strcmp(respuesta,"q\n") && strcmp(respuesta,"\n")){
+         
+         fgets(respuesta,256,stdin);
+      }
+
+         // Evaluar la acción del usuario
+         if (!strcmp(respuesta,"q\n")) {
+            breakpoint=0;
+         } 
+         else if(!strcmp(respuesta,"\n")) { // ingreso Enter
+            breakpoint=1;
+         }
+      
+   }  
 }
 
 FILE* creaArchivoDisco(char* param){
@@ -1551,23 +1482,23 @@ FILE* creaArchivoDisco(char* param){
          }
         
         //fecha de creacion
-         byte= 0x07; //el primer byte del año SIEMPRE va a ser 0x07 si estamos entre 1800 y 2050
+         byte = 0x07; //el primer byte del año SIEMPRE va a ser 0x07 si estamos entre 1800 y 2050
          fwrite(&byte, sizeof(char), 1, arch);
          byte= fecha->tm_year+0x6C; //la funcion devuelve el año -6C (anda a saber por que)
          fwrite(&byte, sizeof(char), 1, arch);
-         byte =fecha->tm_mon+1; //la funcion pone el mes entre 0 y 11
+         byte = fecha->tm_mon+1; //la funcion pone el mes entre 0 y 11
          fwrite(&byte, sizeof(char), 1, arch);
-         byte =fecha->tm_mday;
+         byte = fecha->tm_mday;
          fwrite(&byte, sizeof(char), 1, arch);
          
          //hora de creacion
-         byte =fecha->tm_hour;
+         byte = fecha->tm_hour;
          fwrite(&byte, sizeof(char), 1, arch);
-         byte =fecha->tm_min;
+         byte = fecha->tm_min;
          fwrite(&byte, sizeof(char), 1, arch);
-         byte =fecha->tm_sec;
+         byte = fecha->tm_sec;
          fwrite(&byte, sizeof(char), 1, arch);
-         byte =segundos.tv_usec/10000;
+         byte = segundos.tv_usec/10000;
          fwrite(&byte, sizeof(char), 1, arch);
 
          //tipo
@@ -1599,9 +1530,7 @@ FILE* creaArchivoDisco(char* param){
          
          // Buffer de ceros de 472 bytes
          unsigned char buffer[472] = {0};
-         fwrite(buffer, sizeof(unsigned char), sizeof(buffer), arch);
-        
-        
+         fwrite(buffer, sizeof(unsigned char), sizeof(buffer), arch);            
         
       }
       fclose(arch);
