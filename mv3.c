@@ -43,6 +43,7 @@ void imprimePorPantalla();
 void breakpointDebugger();
 void clearScreen();
 short calculaTamanoMV();
+void accesoDisco();
 FILE* creaArchivoDisco(char*);
 
 void MOV(tppar,tppar);
@@ -127,7 +128,6 @@ int main(int argc, char *argv[]) {
    printf("Por favor indique el nombre del archivo");
    exit(-4);
    }
-   
 
    leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m,&version); // lee el archivo binario y carga las instrucciones en el codesegment
 
@@ -1097,6 +1097,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
    
 
    if (*version==1){
+      
     fread(&byte,sizeof(char),1,arch);
     espacioCode=byte;
     espacioCode<<=8;
@@ -1163,13 +1164,18 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
          espacioTotal+=(tdds[k]&0x0000FFFF);
 
       }
+      
       if (espacioTotal>m){
          printf ("No hay memoria suficiente para cargar todos los segmentos. Memoria necesaria: %dB, memoria disponible:%dB",espacioTotal,m);
          exit(-40);
       }
+      
       for (i=0;i<((tdds[0]&0xFFFF)+(tdds[1]&0xFFFF));i++){ //CS + KS
+      printf("llego?");
          fread(&byte, sizeof(byte), 1, arch); 
+         printf("llego?");
          mv[i]=byte;
+         printf("llego?");
          
       }
 
@@ -1374,6 +1380,11 @@ void stringWrite(){ //op1 = 4
 void clearScreen(){//op1 = 7
    system("cls");
 }
+void accesoDisco(){//op1 = 13 o D
+
+
+
+}
 void breakpointDebugger(){ //op1 = 15 o F
    if (strcmp(debugger,"\0")){
       short tamanoMemoria = calculaTamanoMV(); // calcula el tamaño de la mv apartir del tdds
@@ -1440,7 +1451,6 @@ void breakpointDebugger(){ //op1 = 15 o F
       
    }  
 }
-
 FILE* creaArchivoDisco(char* param){
 
    FILE* arch = fopen(param,"rb"); // se fija si el archivo .vdd ya esta creado
