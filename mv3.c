@@ -1132,7 +1132,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
 
    }
    
-   else if (*version==2){
+   else if (*version==2 || *version ==3 ){
 
       short memoriaOffset=0; 
 
@@ -1171,11 +1171,11 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
       }
       
       for (i=0;i<((tdds[0]&0xFFFF)+(tdds[1]&0xFFFF));i++){ //CS + KS
-      printf("llego?");
+
          fread(&byte, sizeof(byte), 1, arch); 
-         printf("llego?");
+
          mv[i]=byte;
-         printf("llego?");
+
          
       }
 
@@ -1196,7 +1196,7 @@ void inicializaRegistros(int tamano_mv, char version){
    }
 
 
-   if (version == 2 ){
+   if (version == 2 || version == 3 ){
       reg[CS]=0x00000000;
       reg[KS]=0x00010000;
       reg[DS]=0x00020000;    
