@@ -44,7 +44,9 @@ void breakpointDebugger();
 void clearScreen();
 short calculaTamanoMV();
 void accesoDisco();
-FILE* creaArchivoDisco(char*);
+char* creaArchivoDisco(char*);
+int getReg(int,char );
+void setReg(int*, char, int);
 
 void MOV(tppar,tppar);
 void ADD(tppar,tppar);
@@ -82,7 +84,7 @@ char debugger[30]="\0";
 char breakpoint=0;
 
 struct tdiscos {
-   FILE* discos[255];
+   char* discos[255];
    char size;
 } discos;
 
@@ -119,10 +121,11 @@ int main(int argc, char *argv[]) {
             
       else if (strncmp(argv[i], "m=", 2) == 0) { //m=M
          m = atoi(argv[i] + 2); // Extracción del valor de M como un entero
-         mv = (char*)malloc(sizeof(char)*m);
-         memset(mv, 0, m); //inicializa en 0 todo mv
+
       }
    }
+   mv = (char*)malloc(sizeof(char)*m);
+   memset(mv, 0, m); //inicializa en 0 todo mv
 
    if (nombre_archivo == NULL) {
    printf("Por favor indique el nombre del archivo");
@@ -1058,6 +1061,7 @@ tpar address(tpar num) {
    //ejemplo recibe 0x00010020 -> busca ttds 0x0001 -> agarra la direccion del segmento y le suma el offset 0020
    tpar cualtdds= (num>>16)&0x0000FFFF;
    tpar posmem = ((tdds[cualtdds]>>16)&0x0000FFFF) + (num&0x0000FFFF);
+
    return posmem;
 }
 short calculaTamanoMV(){
@@ -1071,64 +1075,69 @@ short calculaTamanoMV(){
  return tamano;
 }
 void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_archivo, int m, char* version){
+   char vmx23[5];
+   FILE* arch = fopen(nombre_archivo,"rb");
+   if (arch == NULL){
+   printf("no se pudo abrir el archivo %s",nombre_archivo);
+   exit(-4);
+   }
+   short espacioCode;
+   
+   int i = 0;
+   unsigned char byte;
 
-    FILE* arch = fopen(nombre_archivo,"rb");
-    if (arch == NULL){
-      printf("no se pudo abrir el archivo %s",nombre_archivo);
-      exit(-4);
-    }
-    short espacioCode;
-    
-    int i = 0;
-    unsigned char byte;
-
-    fread(&byte, sizeof(byte), 1, arch);
-    //  printf("%c",byte);
-    fread(&byte, sizeof(byte), 1, arch);
-    //  printf("%c",byte);
-    fread(&byte, sizeof(byte), 1, arch);
-   //   printf("%c",byte);
-    fread(&byte, sizeof(byte), 1, arch);
-   //   printf("%c",byte);
-    fread(&byte, sizeof(byte), 1, arch);
-   //   printf("%c ",byte);
-    fread(&byte, sizeof(byte), 1, arch);
-    *version=byte;
+   fread(&byte, sizeof(byte), 1, arch);
+   vmx23[0]=byte;
+   fread(&byte, sizeof(byte), 1, arch);
+   vmx23[1]=byte;
+   fread(&byte, sizeof(byte), 1, arch);
+   vmx23[2]=byte;
+   fread(&byte, sizeof(byte), 1, arch);
+   vmx23[3]=byte;
+   fread(&byte, sizeof(byte), 1, arch);
+   vmx23[4]=byte;
+   vmx23[5]='\0';
+   if (strcmp(vmx23,"VMX23")){
+      printf("Archivo no reconocido, no empieza con VMX23");
+      exit(-90);
+   }
+   fread(&byte, sizeof(byte), 1, arch);
+   *version=byte;
    
 
    if (*version==1){
       
-    fread(&byte,sizeof(char),1,arch);
-    espacioCode=byte;
-    espacioCode<<=8;
-    fread(&byte,sizeof(char),1,arch);
-    espacioCode|=byte;
+      fread(&byte,sizeof(char),1,arch);
+      espacioCode=byte;
+      espacioCode<<=8;
+      fread(&byte,sizeof(char),1,arch);
+      espacioCode|=byte;
 
-    tdds[0]   = 0x0000; //posicion del code segment
-    tdds[0] <<= 16;
-   
-      tdds[0] |= espacioCode; //tamano del code segment
-   // printf("code segment: %X \n",tdds[0]);
+      tdds[0]   = 0x0000; //posicion del code segment
+      tdds[0] <<= 16;
+      
+         tdds[0] |= espacioCode; //tamano del code segment
+      // printf("code segment: %X \n",tdds[0]);
 
-    tdds[1]   = espacioCode; // posicion del data segment
-    tdds[1] <<= 16;
-    tdds[1]  |= (MV_SIZE - espacioCode); //tamano del data segment
+      tdds[1]   = espacioCode; // posicion del data segment
+      tdds[1] <<= 16;
+      tdds[1]  |= (MV_SIZE - espacioCode); //tamano del data segment
 
-   if (espacioCode > m) {
-      printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
-      exit(-404);
+      if (espacioCode > m) {
+         printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
+         exit(-404);
+         }
+
+      while (fread(&byte, sizeof(byte), 1, arch)) {
+            if(i+1>m){
+               printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
+               exit(-404);
+            }
+            mv[i++] = byte;
+
       }
 
-   while (fread(&byte, sizeof(byte), 1, arch)) {
-         if(i+1>m){
-            printf("Espacio en memoria insuficiente para cargar el CS, el espacio definido de memoria es %d",m);
-            exit(-404);
-         }
-         mv[i++] = byte;
-
-   }
-
-   *cantInstrucciones=i;
+      *cantInstrucciones=i;
 
    }
    
@@ -1380,11 +1389,121 @@ void stringWrite(){ //op1 = 4
 void clearScreen(){//op1 = 7
    system("cls");
 }
+
 void accesoDisco(){//op1 = 13 o D
+   
+   char operacion=getReg(reg[EAX],'h');
+   char cantSectores=getReg(reg[EAX],'l');
+   char cilindro=getReg(reg[ECX],'h');
+   char cabeza=getReg(reg[ECX],'l');
+   char sector=getReg(reg[EDX],'h');
+   char disco=getReg(reg[EDX],'l');
+   int primerCeldaBuffer=reg[EBX];
+   char cantSectoresTransferidos=0;
+   int tamanoSector=0;
+   char byte;
+   int posicion;
+   int cantidadDeBytesATransferir;
+   
+   FILE* arch;
+   
+   if (disco>discos.size){ //operacion invalida
+      setReg(reg+EAX,'h',0x31);
+      return;
+   }
+   
+   //verifica que cilindro cabeza y sector sea valido
+   arch = fopen(discos.discos[disco],"rb");
+   fseek(arch,33,SEEK_SET);
+   
+   //cilindro
+   fread(&byte, sizeof(byte), 1, arch); 
+   if (cilindro>byte){
+      setReg(reg+EAX,'h',0x0B);
+      return;
+   }
+   //cabeza
+   fread(&byte, sizeof(byte), 1, arch); 
+   if (cabeza>byte){
+      setReg(reg+EAX,'h',0x0C);
+      return;
+   }
+   //sector
+   fread(&byte, sizeof(byte), 1, arch); 
+   if (sector>byte){
+      setReg(reg+EAX,'h',0x0D);
+      return;
+   }
+   //tamanoDeCadaSector
+   for (int i =0;i<4;i++){
+      fread(&byte, sizeof(byte), 1, arch); ;
+      tamanoSector|=byte<<(24-i*8);
+   }
+   fclose(arch);
 
+   cantidadDeBytesATransferir = sector*tamanoSector;
+  
+   //verifico que leyendo o escrbiendo no tenga segmentation fault en ram
+   if(tamanoSegmento(primerCeldaBuffer) < (((primerCeldaBuffer&0xFFFF) +  cantidadDeBytesATransferir ))){
+      cantidadDeBytesATransferir = tamanoSegmento(primerCeldaBuffer) - primerCeldaBuffer&0xFFFF; 
+   }
 
+   posicion=512+(cilindro*cabeza*sector*tamanoSector)+(cabeza*sector*tamanoSector)+(sector*tamanoSector);
+
+   switch (operacion){
+
+      case 0: //consulta ultimo estado       
+         
+         setReg(reg+EAX,'h',0);
+         break; 
+      
+      case 2: //leer el disco
+         
+         arch = fopen(discos.discos[disco],"rb");
+         fseek(arch,posicion,SEEK_SET);
+         
+         for (int i = 0;i <cantidadDeBytesATransferir; i++){
+            
+            if(fread(&byte, sizeof(byte), 1, arch)!=0){
+               mv[address(primerCeldaBuffer++)]=byte;
+               cantSectoresTransferidos++;
+            }
+            else{
+               setReg(reg+EAX,'h',0x04); // error en transferencia de lectura
+               setReg(reg+EAX,'l',cantSectoresTransferidos);
+               return;
+            }
+
+         }
+         
+         setReg(reg+EAX,'l',cantSectoresTransferidos);
+         setReg(reg+EAX,'h',0);
+         fclose(arch);
+         break; 
+      
+      case 3: //escribir en el disco
+
+         
+         arch = fopen(discos.discos[disco],"rb+"); //modo rb+ permite editar sin crear archivo nuevo
+         
+         
+         setReg(reg+EAX,'h',0);
+         break; 
+      
+      case 8: // obtener los parametros del disco
+
+         setReg(reg+EAX,'h',0);
+         break; 
+
+      
+      default: //devuelve codigo 01 en AH, funcion invalida
+         setReg(reg+EAX,'h',1);
+         break;
+
+   }
 
 }
+
 void breakpointDebugger(){ //op1 = 15 o F
    if (strcmp(debugger,"\0")){
       short tamanoMemoria = calculaTamanoMV(); // calcula el tamaño de la mv apartir del tdds
@@ -1451,7 +1570,7 @@ void breakpointDebugger(){ //op1 = 15 o F
       
    }  
 }
-FILE* creaArchivoDisco(char* param){
+char* creaArchivoDisco(char* param){
 
    FILE* arch = fopen(param,"rb"); // se fija si el archivo .vdd ya esta creado
 
@@ -1544,5 +1663,49 @@ FILE* creaArchivoDisco(char* param){
         
       }
       fclose(arch);
-   return arch;
+   return param;
    }
+
+void setReg(int* reg,char parte,int data){
+
+   if (parte=='x'){
+      data&=0xFFFF;
+      *reg&=0xFFFF0000;
+      *reg|=data;
+
+   }
+   else if (parte =='l'){
+      data&=0xFF;
+      *reg&=0xFFFFFF00;
+      *reg|=data;
+
+   }
+   else if(parte=='h'){
+      data<<=8;
+      data&=0xFF00;
+      *reg&=0xFFFF00FF;
+      *reg|=data;
+   }
+
+}
+
+int getReg(int reg,char parte){
+   int respuesta;
+   if (parte=='x'){
+         respuesta=(reg&0xFFFF);
+   }
+   else if (parte =='l'){
+      respuesta=(reg&0xFF);
+   }
+   else if(parte=='h'){
+      respuesta= ((reg>>8)&0xFF);
+   }
+return respuesta;
+}
+
+int tamanoSegmento(int dir){ //recibe una direccion de memoria e informa el tamaño del segmento que apunta
+
+return ((tdds[(dir>>16)&0xFFFF])&0xFFFF);
+
+
+}
