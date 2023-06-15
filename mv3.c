@@ -1392,6 +1392,7 @@ void clearScreen(){//op1 = 7
 
 void accesoDisco(){//op1 = 13 o D
    
+   char static ultimoEstado;
    char operacion=getReg(reg[EAX],'h');
    char cantSectores=getReg(reg[EAX],'l');
    char cilindro=getReg(reg[ECX],'h');
@@ -1400,7 +1401,7 @@ void accesoDisco(){//op1 = 13 o D
    char disco=getReg(reg[EDX],'l');
    int primerCeldaBuffer=reg[EBX];
    char cantSectoresTransferidos=0;
-   int tamanoSector=0;
+   unsigned int tamanoSector=0;
    char byte;
    int posicion;
    int cantidadDeBytesATransferir;
@@ -1409,6 +1410,7 @@ void accesoDisco(){//op1 = 13 o D
    
    if (disco>discos.size){ //operacion invalida
       setReg(reg+EAX,'h',0x31);
+      ultimoEstado=0x31;
       return;
    }
    
@@ -1419,18 +1421,21 @@ void accesoDisco(){//op1 = 13 o D
    //cilindro
    fread(&byte, sizeof(byte), 1, arch); 
    if (cilindro>byte){
+      ultimoEstado=0x0B;
       setReg(reg+EAX,'h',0x0B);
       return;
    }
    //cabeza
    fread(&byte, sizeof(byte), 1, arch); 
    if (cabeza>byte){
+      ultimoEstado=0x0C;
       setReg(reg+EAX,'h',0x0C);
       return;
    }
    //sector
    fread(&byte, sizeof(byte), 1, arch); 
    if (sector>byte){
+      ultimoEstado=0x0D;
       setReg(reg+EAX,'h',0x0D);
       return;
    }
@@ -1442,19 +1447,20 @@ void accesoDisco(){//op1 = 13 o D
    fclose(arch);
 
    cantidadDeBytesATransferir = sector*tamanoSector;
-  
-   //verifico que leyendo o escrbiendo no tenga segmentation fault en ram
-   if(tamanoSegmento(primerCeldaBuffer) < (((primerCeldaBuffer&0xFFFF) +  cantidadDeBytesATransferir ))){
-      cantidadDeBytesATransferir = tamanoSegmento(primerCeldaBuffer) - primerCeldaBuffer&0xFFFF; 
-   }
 
    posicion=512+(cilindro*cabeza*sector*tamanoSector)+(cabeza*sector*tamanoSector)+(sector*tamanoSector);
+
+   if (tamanoSegmento(primerCeldaBuffer) == -1){ //segmento no existe
+      setReg(reg+EAX,'h',0x04);
+      ultimoEstado=0x04;
+      return;
+   }
 
    switch (operacion){
 
       case 0: //consulta ultimo estado       
          
-         setReg(reg+EAX,'h',0);
+         setReg(reg+EAX,'h',ultimoEstado);
          break; 
       
       case 2: //leer el disco
@@ -1465,19 +1471,30 @@ void accesoDisco(){//op1 = 13 o D
          for (int i = 0;i <cantidadDeBytesATransferir; i++){
             
             if(fread(&byte, sizeof(byte), 1, arch)!=0){
+               if ((primerCeldaBuffer&0xFFFF) > (tamanoSegmento(primerCeldaBuffer))){ //segmentation fault
+                  setReg(reg+EAX,'h',0x04);
+                  ultimoEstado=0x04;
+                  break;
+               }
                mv[address(primerCeldaBuffer++)]=byte;
                cantSectoresTransferidos++;
+
             }
             else{
                setReg(reg+EAX,'h',0x04); // error en transferencia de lectura
+               ultimoEstado=0x04;
                setReg(reg+EAX,'l',cantSectoresTransferidos);
-               return;
+               break;
             }
 
+         }
+         if (getReg(reg[EAX],'h') == 0x4){ //si fallo, sale de la funcion
+            break;   
          }
          
          setReg(reg+EAX,'l',cantSectoresTransferidos);
          setReg(reg+EAX,'h',0);
+         ultimoEstado=0;
          fclose(arch);
          break; 
       
@@ -1485,19 +1502,47 @@ void accesoDisco(){//op1 = 13 o D
 
          
          arch = fopen(discos.discos[disco],"rb+"); //modo rb+ permite editar sin crear archivo nuevo
-         
-         
-         setReg(reg+EAX,'h',0);
-         break; 
-      
-      case 8: // obtener los parametros del disco
+         fseek(arch,posicion,SEEK_SET);
 
+         for (int i = 0;i <cantidadDeBytesATransferir; i++){           
+               if ((primerCeldaBuffer&0xFFFF) > (tamanoSegmento(primerCeldaBuffer))){ //segmentation fault
+                  setReg(reg+EAX,'h',0xCC);
+                  ultimoEstado=0xCC;
+                  break;
+               }
+            byte = mv[address(primerCeldaBuffer++)];
+            if(fwrite(&byte, sizeof(byte), 1, arch)!=0){
+               cantSectoresTransferidos++;
+
+            }
+            else{
+               setReg(reg+EAX,'h',0xCC); // error en transferencia de lectura
+               ultimoEstado=0xCC;
+               setReg(reg+EAX,'l',cantSectoresTransferidos);
+               break;
+            }
+         }
+         if (getReg(reg[EAX],'h') == 0xCC){ //si fallo, sale de la funcion
+            break;   
+         }
+         setReg(reg+EAX,'l',cantSectoresTransferidos);
          setReg(reg+EAX,'h',0);
+         ultimoEstado=0;
+         fclose(arch);
+         break; 
+           
+      case 8: // obtener los parametros del disco
+         setReg(reg+EAX,'h',0);
+         ultimoEstado=0;
+         setReg(reg+ECX,'l',cilindro);
+         setReg(reg+ECX,'l',cabeza);
+         setreg(reg+EDX,'h',sector);
          break; 
 
       
       default: //devuelve codigo 01 en AH, funcion invalida
          setReg(reg+EAX,'h',1);
+         ultimoEstado=1;
          break;
 
    }
