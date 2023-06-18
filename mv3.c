@@ -1582,6 +1582,7 @@ void gestionDinamicaSeg() {//op1 = 14 o E
                tdds[j] |= (0x0000FFFF | tamSegmento); //guardo el tamaño
                for ( k = j + 1 ; k < 8 ; k++ )
                   tdds[k] = ((tdds[k] >> 16) + (tdds[k] & 0x0000FFFF)) << 16;
+               cantSegTot++;   
             }
             else {
                reg[EBX] = -1;
