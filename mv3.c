@@ -92,6 +92,8 @@ struct tdiscos {
 
 int reg[cantRegistros] = {0}; //registros, variable global para que cualquier funcion pueda modificarlos
 unsigned int tdds[TDDS_SIZE]; 
+int cantSegTot = 0;
+int m = MV_SIZE;
 
 int main(int argc, char *argv[]) {
    
@@ -101,7 +103,7 @@ int main(int argc, char *argv[]) {
    char *nombre_archivo=NULL;
    char version=0;
    int cantInstrucciones=0;
-   int m = MV_SIZE;
+
 
    void (*funciones[cantFunciones])(tppar,tppar)={NULL};
    inicializaFunciones(funciones);
@@ -1149,12 +1151,10 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
          fread(&byte,sizeof(char),1,arch);
          espacioCode = byte;
          espacioCode<<=8;
-         fread(&byte,sizeof(char),1,arch);
+         fread(&byte,sizeof(char),1,arch); ¿
          espacioCode |= byte;
-
-         if (espacioCode > MV_SIZE) {
-            printf("\n");
-         }
+         if (byte > 0) // si es mayor a cero es porque existe el segmento
+            cantSegTot++;
 
 
          tdds[k]   = memoriaOffset; 
@@ -1547,6 +1547,51 @@ void accesoDisco(){//op1 = 13 o D
 
    }
 
+}
+
+void gestionDinamicaSeg() {//op1 = 14 o E 
+   char operacion=getReg(reg[EAX],'x');
+   char tamSegmento=getReg(reg[ECX],'x');
+   ///EBX es el puntero a la 1era celda del segmento
+   int comienzoSeg = reg[EBX];
+   int i = 0, j = 0, k;
+
+   if (operacion == 0) { //consulta segmento
+      while ((i < cantSegTot) && (comienzoSeg != ((tdds[i] & 0xFFFF0000) >> 16)))
+         i++;   
+      if (i < cantSegTot) { //el segmento existe
+          setReg(reg+EAX,'x',0x0000); //operacion exitosa
+          setReg(reg+ECX,'x',(tdds[i] & 0x0000FFFF));
+      }
+      else { //el segmento NO existe
+         setReg(reg+EAX,'x',0x0031); //no existe el segmento
+         setReg(reg+ECX,'x',0x0000);   
+      }
+   }
+   else 
+      if (operacion == 1) {
+         if (tamSegmento + calculaTamanoMV() > m) {
+            setReg(reg+EAX,'x',0x00CC); //no hay suficiente memoria
+            reg[EBX] = -1;
+         }
+         else {
+            if (cantSegTot < 8) {
+               while (tdds[j] != tdds[j+1])
+                  j++;
+               //tdds[j] & 0xFFFF0000 tiene el puntero del nuevo segmento
+               tdds[j] |= (0x0000FFFF | tamSegmento); //guardo el tamaño
+               for ( k = j + 1 ; k < 8 ; k++ )
+                  tdds[k] = ((tdds[k] >> 16) + (tdds[k] & 0x0000FFFF)) << 16;
+            }
+            else {
+               reg[EBX] = -1;
+               setReg(reg+EAX,'x',0xFFFF); //falla en la operacion
+            }
+         }   
+
+      }
+      else
+         setReg(reg+EAX,'x',0x0001); //funcion invalida  
 }
 
 void breakpointDebugger(){ //op1 = 15 o F
