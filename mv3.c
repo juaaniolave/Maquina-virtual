@@ -1601,10 +1601,12 @@ void gestionDinamicaSeg() {//op1 = 14 o E
          }
          else {
             if (cantSegTot < 8) {
-               while (tdds[j] != tdds[j+1])
+               while ((tdds[j] & 0x0000FFFF) != 0 )
                   j++;
-               //tdds[j] & 0xFFFF0000 tiene el puntero del nuevo segmento
-               tdds[j] |= (0x0000FFFF | tamSegmento); //guardo el tamaño
+               tdds[j]  |= queSegmento;
+               tdds[j] <<= 16;
+               tdds[j]  |= (0x0000FFFF | tamSegmento); //guardo el tamaño
+               
                for ( k = j + 1 ; k < 8 ; k++ )
                   tdds[k] = ((tdds[k] >> 16) + (tdds[k] & 0x0000FFFF)) << 16;
                cantSegTot++;   
