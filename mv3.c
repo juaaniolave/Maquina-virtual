@@ -1580,15 +1580,13 @@ void gestionDinamicaSeg() {//op1 = 14 o E
    char operacion=getReg(reg[EAX],'x');
    char tamSegmento=getReg(reg[ECX],'x');
    ///EBX es el puntero a la 1era celda del segmento
-   int comienzoSeg = reg[EBX];
-   int i = 0, j = 0, k;
+   int queSegmento = reg[EBX];
+   int j = 0, k;
 
    if (operacion == 0) { //consulta segmento
-      while ((i < cantSegTot) && (comienzoSeg != ((tdds[i] & 0xFFFF0000) >> 16)))
-         i++;   
-      if (i < cantSegTot) { //el segmento existe
+      if (queSegmento < cantSegTot) { //el segmento existe
           setReg(reg+EAX,'x',0x0000); //operacion exitosa
-          setReg(reg+ECX,'x',(tdds[i] & 0x0000FFFF));
+          setReg(reg+ECX,'x',(tdds[queSegmento] & 0x0000FFFF));
       }
       else { //el segmento NO existe
          setReg(reg+EAX,'x',0x0031); //no existe el segmento
