@@ -47,6 +47,7 @@ void accesoDisco();
 char* creaArchivoDisco(char*);
 int getReg(int,char );
 void setReg(int*, char, int);
+int tamanoSegmento(int);
 
 void MOV(tppar,tppar);
 void ADD(tppar,tppar);
@@ -126,13 +127,13 @@ int main(int argc, char *argv[]) {
 
       }
    }
+   if (nombre_archivo == NULL) {
+      printf("Por favor indique el nombre del archivo");
+      exit(-4);
+   }
+ 
    mv = (char*)malloc(sizeof(char)*m);
    memset(mv, 0, m); //inicializa en 0 todo mv
-
-   if (nombre_archivo == NULL) {
-   printf("Por favor indique el nombre del archivo");
-   exit(-4);
-   }
 
    leeArchivoBinario(mv, &cantInstrucciones, nombre_archivo,m,&version); // lee el archivo binario y carga las instrucciones en el codesegment
 
@@ -1151,7 +1152,7 @@ void leeArchivoBinario(unsigned char mv[], int *cantInstrucciones, char *nombre_
          fread(&byte,sizeof(char),1,arch);
          espacioCode = byte;
          espacioCode<<=8;
-         fread(&byte,sizeof(char),1,arch); ¿
+         fread(&byte,sizeof(char),1,arch);
          espacioCode |= byte;
          if (byte > 0) // si es mayor a cero es porque existe el segmento
             cantSegTot++;
@@ -1394,21 +1395,21 @@ void accesoDisco(){//op1 = 13 o D
    
    char static ultimoEstado;
    char operacion=getReg(reg[EAX],'h');
-   char cantSectores=getReg(reg[EAX],'l');
-   char cilindro=getReg(reg[ECX],'h');
-   char cabeza=getReg(reg[ECX],'l');
-   char sector=getReg(reg[EDX],'h');
-   char disco=getReg(reg[EDX],'l');
+   unsigned char cantSectores=getReg(reg[EAX],'l');
+   unsigned char cilindro=getReg(reg[ECX],'h');
+   unsigned char cabeza=getReg(reg[ECX],'l');
+   unsigned char sector=getReg(reg[EDX],'h');
+   unsigned char disco=getReg(reg[EDX],'l');
    int primerCeldaBuffer=reg[EBX];
    char cantSectoresTransferidos=0;
    unsigned int tamanoSector=0;
-   char byte;
+   unsigned char byte;
    int posicion;
    int cantidadDeBytesATransferir;
    
    FILE* arch;
    
-   if (disco>discos.size){ //operacion invalida
+   if (disco>discos.size-1){ //operacion invalida
       setReg(reg+EAX,'h',0x31);
       ultimoEstado=0x31;
       return;
@@ -1416,6 +1417,11 @@ void accesoDisco(){//op1 = 13 o D
    
    //verifica que cilindro cabeza y sector sea valido
    arch = fopen(discos.discos[disco],"rb");
+   if (arch == NULL){
+      printf("No fue posible leer el disco");
+      exit (-404);
+   }
+
    fseek(arch,33,SEEK_SET);
    
    //cilindro
@@ -1466,6 +1472,17 @@ void accesoDisco(){//op1 = 13 o D
       case 2: //leer el disco
          
          arch = fopen(discos.discos[disco],"rb");
+
+         fseek(arch, 0, SEEK_END);     // Ir al final del archivo
+         long currSize = ftell(arch);  // Obtener el tamaño actual del archivo
+         if (currSize < (posicion + cantidadDeBytesATransferir)) {    // Expandir el archivo hasta el byte posicion
+            unsigned char zeroByte = 0;
+            fseek(arch, 0, SEEK_END);  // Ir al final del archivo
+            while (currSize < (posicion + cantidadDeBytesATransferir)) {
+               fwrite(&zeroByte, sizeof(unsigned char), 1, arch);
+               currSize++;
+            }
+         }
          fseek(arch,posicion,SEEK_SET);
          
          for (int i = 0;i <cantidadDeBytesATransferir; i++){
@@ -1502,6 +1519,16 @@ void accesoDisco(){//op1 = 13 o D
 
          
          arch = fopen(discos.discos[disco],"rb+"); //modo rb+ permite editar sin crear archivo nuevo
+         fseek(arch, 0, SEEK_END);     // Ir al final del archivo
+         long currSize2 = ftell(arch);  // Obtener el tamaño actual del archivo
+         if (currSize2 < (posicion + cantidadDeBytesATransferir)) {    // Expandir el archivo hasta el byte posicion
+            unsigned char zeroByte = 0;
+            fseek(arch, 0, SEEK_END);  // Ir al final del archivo
+            while (currSize2 < (posicion + cantidadDeBytesATransferir)) {
+               fwrite(&zeroByte, sizeof(unsigned char), 1, arch);
+               currSize2++;
+            }
+         }
          fseek(arch,posicion,SEEK_SET);
 
          for (int i = 0;i <cantidadDeBytesATransferir; i++){           
@@ -1536,7 +1563,7 @@ void accesoDisco(){//op1 = 13 o D
          ultimoEstado=0;
          setReg(reg+ECX,'l',cilindro);
          setReg(reg+ECX,'l',cabeza);
-         setreg(reg+EDX,'h',sector);
+         setReg(reg+EDX,'h',sector);
          break; 
 
       
@@ -1667,7 +1694,7 @@ char* creaArchivoDisco(char* param){
 
       if(arch==NULL){ //si no esta creado, lo crea
          arch = fopen(param,"wb");
-         char byte;
+         unsigned char byte;
          struct tm *fecha;
          time_t tiempo = time(NULL);  // Obtiene el tiempo actual
          fecha = localtime(&tiempo);  // Convierte el tiempo en una estructura tm
@@ -1750,7 +1777,12 @@ char* creaArchivoDisco(char* param){
          
          // Buffer de ceros de 472 bytes
          unsigned char buffer[472] = {0};
-         fwrite(buffer, sizeof(unsigned char), sizeof(buffer), arch);            
+         fwrite(buffer, sizeof(unsigned char), sizeof(buffer), arch);
+
+     //    for (int y = 0; y< 262144 ;y++){ //le agrega 1gib -512 de espacio
+       //     unsigned char buffer2[4096] = {0};
+      //      fwrite(buffer, sizeof(unsigned char), sizeof(buffer2), arch);             
+      //   }
         
       }
       fclose(arch);
