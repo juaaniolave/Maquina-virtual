@@ -11,7 +11,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/mv3.exe",
-            "args": ["test3.vmx", "-d","m=35000","archivo.vmi","discoprueba.vdd", "discoprueba2.vdd"],
+            "args": ["sample3.vmx", "-d","disk.vdd"],
             "cwd": "${workspaceFolder}",
             "externalConsole": true,
             "stopAtEntry": true,
