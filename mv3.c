@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
    
    
    printf("\n");
-
+   
    while (reg[IP] < cantInstrucciones) {
 
       treg1 = treg2 = op1 = op2 = aux1 = 0;
@@ -756,13 +756,13 @@ void dissasambly(unsigned char cs[],int cantidadInstrucciones){
 
 
 void MOV(tppar op1,tppar op2){ ///0
-   //printf("%s %04X\n ",__func__,reg[IP]);
+   printf("%s %04X\n ",__func__,reg[IP]);
 
     *op1=*op2;
 
 }
 void ADD(tppar op1,tppar op2){ ///1
- //printf("%s %04X\n ",__func__,reg[IP]);
+ printf("%s %04X\n ",__func__,reg[IP]);
 
      *op1+=*op2;
 
@@ -774,7 +774,7 @@ void ADD(tppar op1,tppar op2){ ///1
        reg[CC]=0;
  }
 void SUB(tppar op1,tppar op2){ ///2
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
     *op1 -= *op2;
 
@@ -789,7 +789,7 @@ void SUB(tppar op1,tppar op2){ ///2
 
 }
 void SWAP(tppar op1,tppar op2){ ///3
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
     tpar aux;
 
     aux  = *op1;
@@ -797,7 +797,7 @@ void SWAP(tppar op1,tppar op2){ ///3
     *op2 = aux;
 }
 void MUL(tppar op1,tppar op2) { ///4
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    (*op1) *= (*op2);
 
@@ -811,7 +811,7 @@ void MUL(tppar op1,tppar op2) { ///4
    reg[CC]<<=30;
 }
 void DIV(tppar op1,tppar op2) { ///5
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
 
    if (*op2 == 0) {
@@ -836,7 +836,7 @@ void DIV(tppar op1,tppar op2) { ///5
 
 }
 void CMP(tppar op1,tppar op2) { ///6
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
 
 
@@ -853,15 +853,15 @@ void CMP(tppar op1,tppar op2) { ///6
       reg[CC]<<=30;
 }
 void SHL(tppar op1,tppar op2) { ///7
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = *op1 << *op2;
 }
 void SHR(tppar op1,tppar op2) { ///8
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = *op1 >> *op2;
 }
 void AND(tppar op1,tppar op2) { ///9
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
    *op1 = (*op1) & (*op2);
 
    if (*op1==0)
@@ -873,7 +873,7 @@ void AND(tppar op1,tppar op2) { ///9
       reg[CC]<<=30;
 }
 void OR(tppar op1,tppar op2) { ///10 o A
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
     *op1 = (*op1) | (*op2);
 
    if (*op1==0)
@@ -885,7 +885,7 @@ void OR(tppar op1,tppar op2) { ///10 o A
       reg[CC]<<=30;
 }
 void XOR(tppar op1,tppar op2) { ///11 o B
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
     *op1 = (*op1) ^ (*op2);
 
 
@@ -898,7 +898,7 @@ void XOR(tppar op1,tppar op2) { ///11 o B
       reg[CC]<<=30;
 }
 void SYS(tppar op1,tppar op2) { ///48 
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (*op1 == 1)
 
@@ -939,48 +939,48 @@ void SYS(tppar op1,tppar op2) { ///48
 
 }
 void JMP(tppar op1,tppar op2) { ///49
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    reg[IP]=*op1;
 }
 void JZ(tppar op1,tppar op2) { ///50
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)== 1)
       reg[IP]=*op1;
 }
 void JP(tppar op1,tppar op2) { ///51
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)==0)
       reg[IP]=*op1;
 }
 void JN(tppar op1,tppar op2) { ///52
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)==2)
       reg[IP]=*op1;
 }
 void JNZ(tppar op1,tppar op2) { ///53
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=1)
       reg[IP]=*op1;
 }
 void JNP(tppar op1,tppar op2) { ///54
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=0)
       reg[IP]=*op1;
 }
 void JNN(tppar op1,tppar op2) { ///55
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    if (((reg[CC]>>30)&0b11)!=2)
       reg[IP]=*op1;
 }
 void LDL(tppar op1,tppar op2) { //56
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -989,7 +989,7 @@ void LDL(tppar op1,tppar op2) { //56
 
 }
 void LDH(tppar op1,tppar op2) { //57
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    tpar aux=*op1;
    aux&=0x0000FFFF;
@@ -999,12 +999,12 @@ void LDH(tppar op1,tppar op2) { //57
 
 }
 void RND(tppar op1,tppar op2) { //58
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
 reg[AC]=rand() % (*op1 + 1);
 }
 void NOT(tppar op1,tppar op2) { //59
-//printf("%s %04X\n ",__func__,reg[IP]);
+printf("%s %04X\n ",__func__,reg[IP]);
 
    *op1= ~*op1;
 
@@ -1018,7 +1018,7 @@ void NOT(tppar op1,tppar op2) { //59
 
 }
 void PUSH(tppar op1,tppar op2){
-   //printf("%s %04X\n ",__func__,reg[IP]);
+   printf("%s %04X\n ",__func__,reg[IP]);
 
    reg[SP] -= 4;
    if (reg[SP] < reg[SS]) {
@@ -1031,7 +1031,7 @@ void PUSH(tppar op1,tppar op2){
    }
 }                                            
 void POP(tppar op1,tppar op2){
-   //printf("%s %04X\n ",__func__,reg[IP]);
+   printf("%s %04X\n ",__func__,reg[IP]);
       
    if (reg[SP] >= (reg[SS] + ((tdds[(reg[SS]) >> 16]) & 0x0000FFFF))){ // si la pila esta vacia
       printf("Error: Stack Underflow");
@@ -1047,20 +1047,20 @@ void POP(tppar op1,tppar op2){
    reg[SP]+=4;
 }
 void CALL(tppar op1,tppar op2){
-   //printf("%s %04X\n ",__func__,reg[IP]);
+   printf("%s %04X\n ",__func__,reg[IP]);
    
    PUSH(reg+IP,0); //reg+IP porque se manda puntero 
    JMP(op1,0);
 }
 void STOP(tppar op1,tppar op2){
-   //printf("%s %04X\n ",__func__,reg[IP]);
+   printf("%s %04X\n ",__func__,reg[IP]);
 
    exit(1); 
 
 
 }
 void RET(tppar op1,tppar op2){
-   //printf("%s %04X\n ",__func__,reg[IP]);
+   printf("%s %04X\n ",__func__,reg[IP]);
    POP(&reg[IP],0);   
 }
 tpar address(tpar num) {
