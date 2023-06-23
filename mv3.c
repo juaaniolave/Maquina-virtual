@@ -48,6 +48,7 @@ char* creaArchivoDisco(char*);
 int getReg(int,char );
 void setReg(int*, char, int);
 int tamanoSegmento(int);
+void gestionDinamicaSeg();
 
 void MOV(tppar,tppar);
 void ADD(tppar,tppar);
@@ -160,8 +161,8 @@ int main(int argc, char *argv[]) {
    
    
    printf("\n");
-
-   while (reg[IP] <= cantInstrucciones) {
+   breakpointDebugger();
+   while (reg[IP] < cantInstrucciones) {
 
       treg1 = treg2 = op1 = op2 = aux1 = 0;
 
@@ -922,6 +923,10 @@ void SYS(tppar op1,tppar op2) { ///48
    else if(*op1 == 13) 
 
       accesoDisco();
+
+   else if (*op1 == 14)
+      
+      gestionDinamicaSeg();
       
    else if (*op1 == 15) 
 
@@ -1223,8 +1228,8 @@ void inicializaRegistros(int tamano_mv, char version){
       }
 
       for (char k=0; k<5;k++){ // si seg no existe, reacomoda a los de abajo
-         
-         if ((tdds[k]&0xFFFF) <= 0){
+         char cantRecorridos=0;
+         while ((tdds[k]&0xFFFF) <= 0 && cantRecorridos < 8){
 
             for(int j = k; j<5; j++){
                tdds[j]=tdds[j+1];
@@ -1236,7 +1241,7 @@ void inicializaRegistros(int tamano_mv, char version){
                   }
                }
             }
-
+            cantRecorridos++;
          }
       }
       reg[SP]=reg[SS] + (tdds[reg[SS]>>16] & 0x0000FFFF); //inicio del StackSegment + offset (el puntero va al final del segmento )
@@ -1256,6 +1261,7 @@ void leeDeTeclado() { //op1 = 1
 
          case 1: //interpreta decimal
             for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+               printf("[%04X]: ", i-(tdds[reg[EDX]>>16]>>16));
                scanf("%d",&aux); //guarda en aux para despues recortar
                k=8*((reg[ECX]>>8)&0xFF)-8;
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
@@ -1267,6 +1273,7 @@ void leeDeTeclado() { //op1 = 1
 
          case 2: //intepreta caracter
             for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+               printf("[%04X]: ", i-(tdds[reg[EDX]>>16]>>16));
                scanf("%c",&aux); //guarda en aux para despues recortar
                k=8*((reg[ECX]>>8)&0xFF)-8;
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
@@ -1278,6 +1285,7 @@ void leeDeTeclado() { //op1 = 1
 
          case 4: // interpreta octal
             for (i=((tdds[reg[EDX]>>16]>>16)+reg[EDX]&0x0000FFFF);i<((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+               printf("[%04X]: ", i-(tdds[reg[EDX]>>16]>>16));
                scanf("%o",&aux); //guarda en aux para despues recortar
                k=8*((reg[ECX]>>8)&0xFF)-8;
                for (int j = 0;j<((reg[ECX]>>8)&0xFF);j++){ //recorta y almacena
@@ -1289,6 +1297,7 @@ void leeDeTeclado() { //op1 = 1
 
          case 8: // interpreta Hexa
             for (i = ((tdds[reg[EDX] >> 16] >> 16) + reg[EDX] & 0x0000FFFF) ; i < ((reg[ECX]>>8)&0xFF)*(reg[ECX]&0xFF)+(tdds[reg[EDX]>>16]>>16)+(reg[EDX]&0x0000FFFF);){ //i=EDX (direccion de memoria) aumenta en CL (cantidad de celdas por dato) hasta CH*CL+EDX (direccion de memoria final)
+               printf("[%04X]: ", i-(tdds[reg[EDX]>>16]>>16));
                scanf("%x",&aux); //guarda en aux para despues recortar
                k=8*((reg[ECX]>>8)&0xFF)-8;
                for (int j = 0 ; j < ((reg[ECX] >> 8) & 0xFF) ; j++){ //recorta y almacena
@@ -1418,49 +1427,51 @@ void accesoDisco(){//op1 = 13 o D
    //verifica que cilindro cabeza y sector sea valido
    arch = fopen(discos.discos[disco],"rb");
    if (arch == NULL){
-      printf("No fue posible leer el disco");
-      exit (-404);
+      setReg(reg+EAX,'h',0xFF);
+      return;
    }
 
    fseek(arch,33,SEEK_SET);
    
    //cilindro
-   fread(&byte, sizeof(byte), 1, arch); 
-   if (cilindro>byte){
+   fread(&byte, sizeof(byte), 1, arch);
+   if (operacion == 8){
+      cilindro=byte;
+   } else if (cilindro>byte){
       ultimoEstado=0x0B;
       setReg(reg+EAX,'h',0x0B);
       return;
    }
    //cabeza
    fread(&byte, sizeof(byte), 1, arch); 
-   if (cabeza>byte){
+   if (operacion == 8){
+      cabeza=byte;
+   } else if (cabeza>byte){
       ultimoEstado=0x0C;
       setReg(reg+EAX,'h',0x0C);
       return;
    }
    //sector
    fread(&byte, sizeof(byte), 1, arch); 
-   if (sector>byte){
+   if (operacion == 8){
+      sector=byte;
+   } else if (sector>byte){
       ultimoEstado=0x0D;
       setReg(reg+EAX,'h',0x0D);
       return;
    }
    //tamanoDeCadaSector
+
    for (int i =0;i<4;i++){
       fread(&byte, sizeof(byte), 1, arch); ;
       tamanoSector|=byte<<(24-i*8);
    }
    fclose(arch);
 
-   cantidadDeBytesATransferir = sector*tamanoSector;
+   cantidadDeBytesATransferir = cantSectores*tamanoSector;
 
    posicion=512+(cilindro*cabeza*sector*tamanoSector)+(cabeza*sector*tamanoSector)+(sector*tamanoSector);
 
-   if (tamanoSegmento(primerCeldaBuffer) == -1){ //segmento no existe
-      setReg(reg+EAX,'h',0x04);
-      ultimoEstado=0x04;
-      return;
-   }
 
    switch (operacion){
 
@@ -1488,7 +1499,7 @@ void accesoDisco(){//op1 = 13 o D
          for (int i = 0;i <cantidadDeBytesATransferir; i++){
             
             if(fread(&byte, sizeof(byte), 1, arch)!=0){
-               if ((primerCeldaBuffer&0xFFFF) > (tamanoSegmento(primerCeldaBuffer))){ //segmentation fault
+               if ((primerCeldaBuffer&0xFFFF) >= (tamanoSegmento(primerCeldaBuffer))){ //segmentation fault
                   setReg(reg+EAX,'h',0x04);
                   ultimoEstado=0x04;
                   break;
@@ -1532,7 +1543,7 @@ void accesoDisco(){//op1 = 13 o D
          fseek(arch,posicion,SEEK_SET);
 
          for (int i = 0;i <cantidadDeBytesATransferir; i++){           
-               if ((primerCeldaBuffer&0xFFFF) > (tamanoSegmento(primerCeldaBuffer))){ //segmentation fault
+               if ((primerCeldaBuffer&0xFFFF) >= (tamanoSegmento(primerCeldaBuffer))){ //segmentation fault
                   setReg(reg+EAX,'h',0xCC);
                   ultimoEstado=0xCC;
                   break;
@@ -1559,11 +1570,12 @@ void accesoDisco(){//op1 = 13 o D
          break; 
            
       case 8: // obtener los parametros del disco
-         setReg(reg+EAX,'h',0);
-         ultimoEstado=0;
+
          setReg(reg+ECX,'l',cilindro);
          setReg(reg+ECX,'l',cabeza);
          setReg(reg+EDX,'h',sector);
+         setReg(reg+EAX,'h',0);
+         ultimoEstado=0;
          break; 
 
       
@@ -1580,13 +1592,13 @@ void gestionDinamicaSeg() {//op1 = 14 o E
    char operacion=getReg(reg[EAX],'x');
    char tamSegmento=getReg(reg[ECX],'x');
    ///EBX es el puntero a la 1era celda del segmento
-   int queSegmento = reg[EBX];
+   int queSegmento = reg[EBX]>>16;
    int j = 0, k;
 
    if (operacion == 0) { //consulta segmento
       if (queSegmento < cantSegTot) { //el segmento existe
-          setReg(reg+EAX,'x',0x0000); //operacion exitosa
-          setReg(reg+ECX,'x',(tdds[queSegmento] & 0x0000FFFF));
+         setReg(reg+ECX,'x',(tdds[queSegmento] & 0x0000FFFF));
+         setReg(reg+EAX,'x',0x0000); //operacion exitosa
       }
       else { //el segmento NO existe
          setReg(reg+EAX,'x',0x0031); //no existe el segmento
@@ -1601,14 +1613,15 @@ void gestionDinamicaSeg() {//op1 = 14 o E
          }
          else {
             if (cantSegTot < 8) {
-               while ((tdds[j] & 0x0000FFFF) != 0 )
+               while ((tdds[j]&0xFFFF)>0)
                   j++;
-               tdds[j]  |= queSegmento;
-               tdds[j] <<= 16;
-               tdds[j]  |= (0x0000FFFF | tamSegmento); //guardo el tamaño
-               
-               for ( k = j + 1 ; k < 8 ; k++ )
-                  tdds[k] = ((tdds[k] >> 16) + (tdds[k] & 0x0000FFFF)) << 16;
+
+               tdds[j] |= tamSegmento; //guardo el tamaño
+               reg[EBX]=j;
+               reg[EBX]<<=16;
+
+               for (k = j+1 ; k<8 ; k++)
+                  tdds[k] = ((tdds[k] >> 16) + (tdds[j] & 0x0000FFFF)) << 16;
                cantSegTot++;   
             }
             else {
@@ -1827,7 +1840,6 @@ return respuesta;
 }
 
 int tamanoSegmento(int dir){ //recibe una direccion de memoria e informa el tamaño del segmento que apunta
-
 return ((tdds[(dir>>16)&0xFFFF])&0xFFFF);
 
 
