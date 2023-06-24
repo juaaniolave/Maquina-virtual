@@ -1409,6 +1409,9 @@ void accesoDisco(){//op1 = 13 o D
    unsigned char cabeza=getReg(reg[ECX],'l');
    unsigned char sector=getReg(reg[EDX],'h');
    unsigned char disco=getReg(reg[EDX],'l');
+   unsigned char cantidadCilindrosDisco;
+   unsigned char cantidadCabezaDisco;
+   unsigned char cantidadSectorDisco;
    int primerCeldaBuffer=reg[EBX];
    char cantSectoresTransferidos=0;
    unsigned int tamanoSector=0;
@@ -1435,27 +1438,24 @@ void accesoDisco(){//op1 = 13 o D
    
    //cilindro
    fread(&byte, sizeof(byte), 1, arch);
-   if (operacion == 8){
-      cilindro=byte;
-   } else if (cilindro>byte){
+   cantidadCilindrosDisco=byte;
+   if (cilindro>byte){
       ultimoEstado=0x0B;
       setReg(reg+EAX,'h',0x0B);
       return;
    }
    //cabeza
    fread(&byte, sizeof(byte), 1, arch); 
-   if (operacion == 8){
-      cabeza=byte;
-   } else if (cabeza>byte){
+   cantidadCabezaDisco=byte;
+   if (cabeza>byte){
       ultimoEstado=0x0C;
       setReg(reg+EAX,'h',0x0C);
       return;
    }
    //sector
-   fread(&byte, sizeof(byte), 1, arch); 
-   if (operacion == 8){
-      sector=byte;
-   } else if (sector>byte){
+   fread(&byte, sizeof(byte), 1, arch);
+   cantidadSectorDisco=byte; 
+   if (sector>byte){
       ultimoEstado=0x0D;
       setReg(reg+EAX,'h',0x0D);
       return;
@@ -1470,7 +1470,7 @@ void accesoDisco(){//op1 = 13 o D
 
    cantidadDeBytesATransferir = cantSectores*tamanoSector;
 
-   posicion=512+(cilindro*cabeza*sector*tamanoSector)+(cabeza*sector*tamanoSector)+(sector*tamanoSector);
+   posicion=512+(cilindro*cantidadCabezaDisco*cantidadSectorDisco*tamanoSector)+(cabeza*cantidadSectorDisco*tamanoSector)+(sector*tamanoSector);
 
 
    switch (operacion){
@@ -1571,9 +1571,9 @@ void accesoDisco(){//op1 = 13 o D
            
       case 8: // obtener los parametros del disco
 
-         setReg(reg+ECX,'l',cilindro);
-         setReg(reg+ECX,'l',cabeza);
-         setReg(reg+EDX,'h',sector);
+         setReg(reg+ECX,'l',cantidadCilindrosDisco);
+         setReg(reg+ECX,'l',cantidadCabezaDisco);
+         setReg(reg+EDX,'h',cantidadSectorDisco);
          setReg(reg+EAX,'h',0);
          ultimoEstado=0;
          break; 
@@ -1596,7 +1596,7 @@ void gestionDinamicaSeg() {//op1 = 14 o E
    int j = 0, k;
 
    if (operacion == 0) { //consulta segmento
-      if (queSegmento < cantSegTot) { //el segmento existe
+      if (queSegmento < cantSegTot && queSegmento >= 0) { //el segmento existe
          setReg(reg+ECX,'x',(tdds[queSegmento] & 0x0000FFFF));
          setReg(reg+EAX,'x',0x0000); //operacion exitosa
       }
