@@ -1590,7 +1590,7 @@ void accesoDisco(){//op1 = 13 o D
 
 void gestionDinamicaSeg() {//op1 = 14 o E 
    char operacion=getReg(reg[EAX],'x');
-   char tamSegmento=getReg(reg[ECX],'x');
+   short tamSegmento=getReg(reg[ECX],'x');
    ///EBX es el puntero a la 1era celda del segmento
    int queSegmento = reg[EBX]>>16;
    int j = 0, k;
@@ -1613,6 +1613,7 @@ void gestionDinamicaSeg() {//op1 = 14 o E
          }
          else {
             if (cantSegTot < 8) {
+               setReg(reg+EAX,'x',0x0000); //operacion exitosa
                while ((tdds[j]&0xFFFF)>0)
                   j++;
 
