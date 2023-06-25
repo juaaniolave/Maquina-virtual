@@ -92,7 +92,7 @@ struct tdiscos {
 
 
 
-int reg[cantRegistros] = {0}; //registros, variable global para que cualquier funcion pueda modificarlos
+int reg[cantRegistros]; //registros, variable global para que cualquier funcion pueda modificarlos
 unsigned int tdds[TDDS_SIZE]; 
 int cantSegTot = 0;
 int m = MV_SIZE;
@@ -161,7 +161,6 @@ int main(int argc, char *argv[]) {
    
    
    printf("\n");
-   breakpointDebugger();
    while (reg[IP] < cantInstrucciones) {
 
       treg1 = treg2 = op1 = op2 = aux1 = 0;
@@ -1337,15 +1336,15 @@ void imprimePorPantalla(){ //op1 = 2
          }
       if (reg[EAX] & 0b10) //si tiene que imprimir caracter
             printf (" ");
+
+      if (reg[EAX] & 0b1000)
+         printf("%%%X ",aux);
       if (reg[EAX] & 0b1) 
          printf("#%d ",aux);
 
       if (reg[EAX] & 0b100)
          printf("@%o ",aux);
-
-      if (reg[EAX] & 0b1000)
-         printf("%%%X",aux);
-      
+     
       printf("\n");
       }
 }
@@ -1439,7 +1438,7 @@ void accesoDisco(){//op1 = 13 o D
    //cilindro
    fread(&byte, sizeof(byte), 1, arch);
    cantidadCilindrosDisco=byte;
-   if (cilindro>byte){
+   if (cilindro>=byte){
       ultimoEstado=0x0B;
       setReg(reg+EAX,'h',0x0B);
       return;
@@ -1447,7 +1446,7 @@ void accesoDisco(){//op1 = 13 o D
    //cabeza
    fread(&byte, sizeof(byte), 1, arch); 
    cantidadCabezaDisco=byte;
-   if (cabeza>byte){
+   if (cabeza>=byte){
       ultimoEstado=0x0C;
       setReg(reg+EAX,'h',0x0C);
       return;
@@ -1455,7 +1454,7 @@ void accesoDisco(){//op1 = 13 o D
    //sector
    fread(&byte, sizeof(byte), 1, arch);
    cantidadSectorDisco=byte; 
-   if (sector>byte){
+   if (sector>=byte){
       ultimoEstado=0x0D;
       setReg(reg+EAX,'h',0x0D);
       return;
@@ -1699,7 +1698,7 @@ void breakpointDebugger(){ //op1 = 15 o F
          else if(!strcmp(respuesta,"\n")) { // ingreso Enter
             breakpoint=1;
          }
-      
+ 
    }  
 }
 char* creaArchivoDisco(char* param){
